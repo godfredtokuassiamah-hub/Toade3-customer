@@ -16,12 +16,6 @@ export type CompactionThresholds = {
   nearTop: number;
 };
 
-const DEFAULT_THRESHOLDS: CompactionThresholds = {
-  compactAfter: COMPACT_AFTER,
-  expandAfter: EXPAND_AFTER,
-  nearTop: NEAR_TOP,
-};
-
 // Clamp to the scrollable range so iOS rubber-banding at either end can't
 // produce travel that toggles the bar.
 export function clampScrollOffset(
@@ -39,10 +33,19 @@ export function nextCompactionState(
   prev: CompactionState,
   offsetY: number,
   deltaY: number,
-  thresholds: CompactionThresholds = DEFAULT_THRESHOLDS,
+  thresholds?: CompactionThresholds,
 ): CompactionState {
   "worklet";
-  if (offsetY <= thresholds.nearTop) return { compact: false, travel: 0 };
+  // No `= DEFAULT_THRESHOLDS` default parameter: the worklets plugin doesn't
+  // capture outer variables used in default parameters, so on the UI thread
+  // it threw a ReferenceError inside the scroll handler and iOS aborted the
+  // app (crash log: UIEventHandler -> runSyncOnRuntime -> throwPendingError).
+  const t = thresholds ?? {
+    compactAfter: 48,
+    expandAfter: 20,
+    nearTop: 24,
+  };
+  if (offsetY <= t.nearTop) return { compact: false, travel: 0 };
   if (deltaY === 0) return prev;
   // Moving the way that keeps the current state resets the travel, so small
   // back-and-forth finger adjustments never accumulate into a toggle.
@@ -50,10 +53,10 @@ export function nextCompactionState(
     return { compact: prev.compact, travel: 0 };
   }
   const travel = prev.travel + deltaY;
-  if (!prev.compact && travel >= thresholds.compactAfter) {
+  if (!prev.compact && travel >= t.compactAfter) {
     return { compact: true, travel: 0 };
   }
-  if (prev.compact && travel <= -thresholds.expandAfter) {
+  if (prev.compact && travel <= -t.expandAfter) {
     return { compact: false, travel: 0 };
   }
   return { compact: prev.compact, travel };

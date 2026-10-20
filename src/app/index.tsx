@@ -12,6 +12,8 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { getLaunchRoute, type LaunchRoute } from "../services/profile";
+
 const backgroundImage = require("../../assets/images/LOGOS/Onboarding background.png");
 // Transparent, trimmed versions of "image 1.png" / "image 2.png".
 const logoIcon = require("../../assets/images/LOGOS/logo-icon.png");
@@ -49,12 +51,24 @@ export default function Index() {
       );
     }
 
-    // replace() so the back gesture doesn't return to the splash.
-    const timer = setTimeout(
-      () => router.replace("/onboarding"),
-      SPLASH_DURATION_MS,
-    );
-    return () => clearTimeout(timer);
+    // Session restore runs during the splash: signed out -> onboarding,
+    // signed in -> /home, /complete-profile or /complete-address by profile
+    // completeness (routeForProfile).
+    // Never shorter than SPLASH_DURATION_MS. replace() so the back gesture
+    // doesn't return to the splash.
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const minDelay = new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, SPLASH_DURATION_MS);
+    });
+    const route = getLaunchRoute().catch((): LaunchRoute => "/onboarding");
+    void Promise.all([route, minDelay]).then(([next]) => {
+      if (!cancelled) router.replace(next);
+    });
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [reduceMotion, iconOpacity, iconScale, wordOpacity, wordTranslate]);
 
   const iconStyle = useAnimatedStyle(() => ({

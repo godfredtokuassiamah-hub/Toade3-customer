@@ -29,6 +29,6 @@ export const colors = {
   imagePlaceholderIcon: "#BDBDBD",
   tabInactive: "#1C1C1E",
   tabBarShadow: "#000000",
-  // Soft orange capsule behind the active tab (primary at 13%).
-  tabSelection: "rgba(232,104,42,0.13)",
+  // Light grey capsule behind the active tab.
+  tabSelection: "rgba(17,17,17,0.08)",
 } as const;

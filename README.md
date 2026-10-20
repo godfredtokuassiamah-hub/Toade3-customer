@@ -270,3 +270,7 @@ Customer code must **never** call kitchen transitions, `claim_job`, rider locati
 - [Supabase Auth with React Native](https://supabase.com/docs/guides/auth/quickstarts/react-native) · [Native mobile deep linking](https://supabase.com/docs/guides/auth/native-mobile-deep-linking)
 - [Expo SecureStore](https://docs.expo.dev/versions/latest/sdk/securestore/) · [Expo SQLite](https://docs.expo.dev/versions/latest/sdk/sqlite/) · [Expo push notifications](https://docs.expo.dev/push-notifications/overview/) · [Expo Location](https://docs.expo.dev/versions/latest/sdk/location/)
 - [Apple App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)
+
+## Credits
+
+- Category icons (`assets/icons/categories/`): Icons by [Icons8](https://icons8.com). The free tier requires attribution; show it in-app or buy a licence before release.

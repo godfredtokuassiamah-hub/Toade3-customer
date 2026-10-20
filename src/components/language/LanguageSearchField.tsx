@@ -6,9 +6,14 @@ import { Icon } from "../ui/Icon";
 type Props = {
   value: string;
   onChangeText: (text: string) => void;
+  accessibilityLabel?: string;
 };
 
-export function LanguageSearchField({ value, onChangeText }: Props) {
+export function LanguageSearchField({
+  value,
+  onChangeText,
+  accessibilityLabel = "Search languages",
+}: Props) {
   return (
     <View style={styles.field}>
       <Icon name="search" size={18} color={colors.textSecondary} />
@@ -21,7 +26,7 @@ export function LanguageSearchField({ value, onChangeText }: Props) {
         autoCapitalize="none"
         returnKeyType="search"
         clearButtonMode="while-editing"
-        accessibilityLabel="Search languages"
+        accessibilityLabel={accessibilityLabel}
         style={styles.input}
       />
     </View>

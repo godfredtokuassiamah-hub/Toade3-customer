@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   AppState,
@@ -40,12 +41,31 @@ export function HomeTopBar({
   const insets = useSafeAreaInsets();
   const [greeting, setGreeting] = useState(() => getGreeting(new Date()));
 
-  // Refresh when the app returns to the foreground (morning -> afternoon).
+  // Keep the greeting in sync with the device clock (which already follows the
+  // user's time zone). Refresh on foreground AND on a timer aligned to the next
+  // minute, so it flips on its own at 12:00 / 17:00 / 05:00 while the app stays
+  // open, not only when reopened.
   useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>;
+
+    const refresh = () => {
+      setGreeting(getGreeting(new Date()));
+      // Fire again at the start of the next minute (ms until :00 of next min).
+      const now = new Date();
+      const msToNextMinute =
+        (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+      timeout = setTimeout(refresh, msToNextMinute);
+    };
+
+    refresh();
+
     const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") setGreeting(getGreeting(new Date()));
+      if (state === "active") refresh();
     });
-    return () => sub.remove();
+    return () => {
+      clearTimeout(timeout);
+      sub.remove();
+    };
   }, []);
 
   const hairlineStyle = useAnimatedStyle(() => ({
@@ -58,15 +78,14 @@ export function HomeTopBar({
         <Avatar source={avatar} name={fullName} size={44} />
         <View style={styles.info}>
           <Pressable
-            // TODO(location): open the drop-point picker.
-            onPress={() => {}}
+            onPress={() => router.push("/location-picker")}
             accessibilityRole="button"
             accessibilityLabel={`Delivery location, ${locationLabel}`}
-            accessibilityHint="Changes the drop point"
+            accessibilityHint="Changes the delivery address"
             hitSlop={8}
             style={({ pressed }) => [styles.location, pressed && styles.pressed]}
           >
-            <Text style={styles.locationText} numberOfLines={1}>
+            <Text style={styles.locationText} numberOfLines={1} ellipsizeMode="tail">
               {locationLabel}
             </Text>
             <Icon

@@ -1,6 +1,12 @@
 // TypeScript 6 no longer auto-includes @types/*, so pull in jest globals here.
 /// <reference types="jest" />
-import { formatEta, formatGhs, getGreeting, getInitials } from "../format";
+import {
+  formatEta,
+  formatGhs,
+  getFirstName,
+  getGreeting,
+  getInitials,
+} from "../format";
 
 describe("formatGhs", () => {
   test.each([
@@ -45,5 +51,17 @@ describe("getInitials", () => {
     ["  ", ""],
   ])("%p -> %p", (name, expected) => {
     expect(getInitials(name)).toBe(expected);
+  });
+});
+
+describe("getFirstName", () => {
+  test.each([
+    ["Ama Mensah", "Ama"],
+    ["  Ama   Serwaa Mensah ", "Ama"],
+    ["Kwame", "Kwame"],
+    ["   ", ""],
+    ["", ""],
+  ])("%p -> %p", (name, expected) => {
+    expect(getFirstName(name)).toBe(expected);
   });
 });

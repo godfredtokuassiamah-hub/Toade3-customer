@@ -6,9 +6,10 @@ import { buildHomeFeed } from "../homeFeed";
 describe("buildHomeFeed", () => {
   const feed = buildHomeFeed(homeData);
 
-  test("returns the 7 rows in visual order", () => {
+  test("returns the rows in visual order (category grid after search)", () => {
     expect(feed.map((row) => [row.type, row.key])).toEqual([
       ["search", "search"],
+      ["categories", "categories"],
       ["banner", "banner-vegetables"],
       ["foodSection", "local-meals"],
       ["popularPlaces", "popular-places"],
@@ -25,7 +26,8 @@ describe("buildHomeFeed", () => {
 
   test("rows reference the catalog objects without copying", () => {
     const { banners, sections, popularPlaces } = homeData;
-    const [, top, localMeals, places, drinks, middle, bakery] = feed;
+    // Skip the leading search + categories rows.
+    const [, , top, localMeals, places, drinks, middle, bakery] = feed;
     expect(top.type === "banner" && top.banner).toBe(banners.top);
     expect(middle.type === "banner" && middle.banner).toBe(banners.middle);
     expect(localMeals.type === "foodSection" && localMeals.section).toBe(

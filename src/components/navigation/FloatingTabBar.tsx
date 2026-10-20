@@ -1,28 +1,30 @@
 // Floating Liquid Glass capsule tab bar. Custom rather than
-// expo-router/unstable-native-tabs: native tabs can't draw the sliding orange
-// selection pill, our size/Manrope labels or our 48/20 compaction thresholds,
-// and render a Material bar on Android.
+// expo-router/unstable-native-tabs: native tabs can't draw the sliding
+// selection pill, our size/Manrope labels, and render a Material bar on
+// Android.
 //
 // The capsule overlays the scene (absolute), so screens pad their content
-// with getTabBarClearance(). Its height follows the shared compaction
-// progress (Home's scroll handler); only height, borderRadius and transforms
-// animate, never opacity (it would break GlassView).
+// with getTabBarClearance(). The surface and its material layers are fully
+// static (fixed size, fixed radius, no opacity): animating a native
+// GlassView/BlurView or any ancestor of it crashed Home or hid the glass.
+// Only the selection pill and the icon/label views animate; they sit above
+// the material, never around it.
 import type { BottomTabBarProps } from "expo-router/tabs";
-import { memo, useEffect } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
+  type LayoutChangeEvent,
   Pressable,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
   type ViewStyle,
 } from "react-native";
 import Animated, {
-  interpolate,
+  interpolateColor,
   useAnimatedStyle,
-  useDerivedValue,
   useReducedMotion,
   useSharedValue,
+  withSequence,
   withSpring,
   withTiming,
 } from "react-native-reanimated";
@@ -44,8 +46,15 @@ import {
   TAB_LABEL_LINE,
   TAB_LABEL_MAX_SCALE,
   TAB_LABEL_SIZE,
+  TAB_PILL_INSET_X,
 } from "./tabBarMetrics";
 import { TAB_BAR_SURFACE, type TabBarSurfaceMode } from "./tabBarSurface";
+import {
+  getIndicatorFrame,
+  isTabChange,
+  layoutsEqual,
+  type TabLayout,
+} from "./tabIndicator";
 import { useTabBarSurface } from "./useTabBarSurface";
 
 const TABS: Record<string, { icon: IconName; label: string }> = {
@@ -55,53 +64,91 @@ const TABS: Record<string, { icon: IconName; label: string }> = {
   account: { icon: "account", label: "Account" },
 };
 
-// Critically damped, no overshoot: perceptual 180ms is ~270ms real.
-// (duration/dampingRatio are exclusive with stiffness/damping.)
-const SELECTION_SPRING = {
-  duration: 180,
-  dampingRatio: 1,
-  overshootClamping: true,
-};
+// Slightly underdamped for a small liquid overshoot. Perceptual 380ms is
+// ~570ms real; duration/dampingRatio are exclusive with stiffness/damping.
+const PILL_SPRING = { duration: 380, dampingRatio: 0.78 };
+// Icon pop on selection: quick grow, then a bouncy settle back to 1.
+const BOUNCE_PEAK = 1.14;
+const BOUNCE_UP_MS = 110;
+const BOUNCE_SPRING = { duration: 320, dampingRatio: 0.5 };
+const BOUNCE_OUT_MS = 150;
 const PRESS_SCALE = 0.97;
 const PRESS_MS = 120;
 const ICON_FADE_MS = 180;
+// Inactive #6B6B6B is 5.3:1 on white (AA); active #111111 is ~17:1.
+const LABEL_INACTIVE = colors.textMuted;
+const LABEL_ACTIVE = colors.text;
 
 type Navigation = BottomTabBarProps["navigation"];
 type Route = BottomTabBarProps["state"]["routes"][number];
 
 type TabItemProps = {
   route: Route;
-  focused: boolean;
+  index: number;
+  focusedIndex: number;
   icon: IconName;
   label: string;
   navigation: Navigation;
   onReselect: () => void;
+  onItemLayout: (index: number, layout: TabLayout) => void;
 };
 
 const TabItem = memo(function TabItem({
   route,
-  focused,
+  index,
+  focusedIndex,
   icon,
   label,
   navigation,
   onReselect,
+  onItemLayout,
 }: TabItemProps) {
+  const focused = focusedIndex === index;
   const reducedMotion = useReducedMotion();
   const progress = useSharedValue(focused ? 1 : 0);
   const scale = useSharedValue(1);
+  const bounce = useSharedValue(1);
+  const wasFocused = useRef(focused);
 
   useEffect(() => {
     const target = focused ? 1 : 0;
     progress.set(
       reducedMotion ? target : withTiming(target, { duration: ICON_FADE_MS }),
     );
-  }, [focused, reducedMotion, progress]);
+
+    // Bounce only on a real focus change, never on mount.
+    const changed = wasFocused.current !== focused;
+    wasFocused.current = focused;
+    if (!changed) return;
+    if (reducedMotion) {
+      bounce.set(1);
+    } else if (focused) {
+      bounce.set(
+        withSequence(
+          withTiming(BOUNCE_PEAK, { duration: BOUNCE_UP_MS }),
+          withSpring(1, BOUNCE_SPRING),
+        ),
+      );
+    } else {
+      bounce.set(withTiming(1, { duration: BOUNCE_OUT_MS }));
+    }
+  }, [focused, reducedMotion, progress, bounce]);
 
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.get() }],
   }));
+  const bounceStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: bounce.get() }],
+  }));
   const outlineStyle = useAnimatedStyle(() => ({ opacity: 1 - progress.get() }));
   const filledStyle = useAnimatedStyle(() => ({ opacity: progress.get() }));
+  const labelStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(
+      progress.get(),
+      [0, 1],
+      [LABEL_INACTIVE, LABEL_ACTIVE],
+    ),
+  }));
 
   // React Navigation's tab press contract: listeners can preventDefault.
   const onPress = () => {
@@ -115,7 +162,7 @@ const TabItem = memo(function TabItem({
       onReselect();
       return;
     }
-    if (!event.defaultPrevented) {
+    if (isTabChange(focusedIndex, index, event.defaultPrevented)) {
       selectionHaptic();
       navigation.navigate(route.name, route.params);
     }
@@ -125,10 +172,16 @@ const TabItem = memo(function TabItem({
     navigation.emit({ type: "tabLongPress", target: route.key });
   };
 
+  const onLayout = (event: LayoutChangeEvent) => {
+    const { x, width } = event.nativeEvent.layout;
+    onItemLayout(index, { x, width });
+  };
+
   return (
     <Pressable
       onPress={onPress}
       onLongPress={onLongPress}
+      onLayout={onLayout}
       onPressIn={() => {
         if (!reducedMotion) scale.set(withTiming(PRESS_SCALE, { duration: PRESS_MS }));
       }}
@@ -145,24 +198,24 @@ const TabItem = memo(function TabItem({
       <Animated.View style={[styles.itemContent, pressStyle]}>
         {/* Two static Icons cross-faded: flipping `filled` on one mounted
             Android SymbolView can render before the Filled font loads. */}
-        <View style={styles.iconBox}>
+        <Animated.View style={[styles.iconBox, bounceStyle]}>
           <Animated.View style={[StyleSheet.absoluteFill, outlineStyle]}>
             <Icon name={icon} size={TAB_ICON_SIZE} color={colors.tabInactive} />
           </Animated.View>
           <Animated.View style={[StyleSheet.absoluteFill, filledStyle]}>
             <Icon name={icon} size={TAB_ICON_SIZE} color={colors.primary} filled />
           </Animated.View>
-        </View>
+        </Animated.View>
         {/* Capped at 1.4x so "Account" fits a 77pt cell; iOS shows the Large
             Content Viewer above that. */}
-        <Text
-          style={[styles.label, focused && styles.labelFocused]}
+        <Animated.Text
+          style={[styles.label, focused && styles.labelFocused, labelStyle]}
           numberOfLines={1}
           allowFontScaling
           maxFontSizeMultiplier={TAB_LABEL_MAX_SCALE}
         >
           {label}
-        </Text>
+        </Animated.Text>
       </Animated.View>
     </Pressable>
   );
@@ -173,53 +226,69 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
   const mode = useTabBarSurface();
-  const { progress, expand } = useTabBarScroll();
+  const { expand } = useTabBarScroll();
 
-  const { expanded, compact } = getTabBarHeights(fontScale);
+  // Fixed height and radius: the native material is never resized.
+  const { expanded } = getTabBarHeights(fontScale);
   const barWidth = getTabBarWidth(width);
-  const cellWidth = getTabCellWidth(width);
+  const radius = expanded / 2;
+  const pillHeight = expanded - TAB_BAR_PADDING * 2;
 
-  const selected = useSharedValue(state.index);
+  // Measured tab cells (x relative to the row). Plain React state, updated
+  // only when a cell actually moves, so onLayout can't loop.
+  const [layouts, setLayouts] = useState<(TabLayout | undefined)[]>([]);
+  const onItemLayout = useCallback((index: number, layout: TabLayout) => {
+    setLayouts((prev) => {
+      if (layoutsEqual(prev[index], layout)) return prev;
+      const next = prev.slice();
+      next[index] = layout;
+      return next;
+    });
+  }, []);
+
+  const frame = getIndicatorFrame(layouts, state.index, {
+    padding: TAB_BAR_PADDING,
+    fallbackCellWidth: getTabCellWidth(width),
+    insetX: TAB_PILL_INSET_X,
+  });
+
+  const pillX = useSharedValue(frame.x);
+  const pillW = useSharedValue(frame.width);
   useEffect(() => {
-    selected.set(
-      reducedMotion ? state.index : withSpring(state.index, SELECTION_SPRING),
-    );
+    pillX.set(reducedMotion ? frame.x : withSpring(frame.x, PILL_SPRING));
+    pillW.set(reducedMotion ? frame.width : withSpring(frame.width, PILL_SPRING));
+  }, [frame.x, frame.width, reducedMotion, pillX, pillW]);
+
+  useEffect(() => {
     // A compact bar never carries over to another tab.
     expand();
-  }, [state.index, reducedMotion, selected, expand]);
+  }, [state.index, expand]);
 
-  const height = useDerivedValue(() =>
-    interpolate(progress.get(), [0, 1], [expanded, compact]),
-  );
-  const surfaceStyle = useAnimatedStyle(() => ({
-    height: height.get(),
-    borderRadius: height.get() / 2,
+  const pillStyle = useAnimatedStyle(() => ({
+    width: pillW.get(),
+    transform: [{ translateX: pillX.get() }],
   }));
-  const pillStyle = useAnimatedStyle(() => {
-    const pillHeight = height.get() - TAB_BAR_PADDING * 2;
-    return {
-      height: pillHeight,
-      borderRadius: pillHeight / 2,
-      transform: [{ translateX: TAB_BAR_PADDING + selected.get() * cellWidth }],
-    };
-  });
 
   return (
     <View
       style={[styles.root, { bottom: getTabBarBottom(insets.bottom) }]}
       pointerEvents="box-none"
     >
-      <Animated.View
+      <View
         style={[
           styles.surface,
           surfaceVariant[mode],
-          { width: barWidth },
-          surfaceStyle,
+          { width: barWidth, height: expanded, borderRadius: radius },
         ]}
       >
-        <TabBarBackground mode={mode} height={height} />
+        <TabBarBackground mode={mode} radius={radius} />
         <Animated.View
-          style={[styles.pill, { width: cellWidth }, pillStyle]}
+          style={[
+            styles.pill,
+            mode === "glass" && styles.pillGlass,
+            { height: pillHeight, borderRadius: pillHeight / 2 },
+            pillStyle,
+          ]}
           pointerEvents="none"
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
@@ -232,44 +301,38 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
               <TabItem
                 key={route.key}
                 route={route}
-                focused={state.index === index}
+                index={index}
+                focusedIndex={state.index}
                 icon={config.icon}
                 label={config.label}
                 navigation={navigation}
                 onReselect={expand}
+                onItemLayout={onItemLayout}
               />
             );
           })}
         </View>
-      </Animated.View>
+      </View>
     </View>
   );
 }
 
-const { shadow } = TAB_BAR_SURFACE;
-const iosShadow = {
-  shadowColor: shadow.color,
-  shadowOpacity: shadow.opacity,
-  shadowRadius: shadow.radius,
-  shadowOffset: { width: 0, height: shadow.offsetY },
-};
-
-// Glass: the native material supplies depth, so no RN shadow.
+// The cast shadow sits on this surface View, never on GlassView (the native
+// material gives edge depth, not a shadow). boxShadow on every platform: it
+// is drawn outside the capsule only, following its radius. The legacy iOS
+// shadow* props on a transparent view shadow its contents instead (icons and
+// labels got halos), and Android elevation greys through a translucent fill.
+// Translucent modes keep the surface transparent; their fill is a layer in
+// TabBarBackground.
 const surfaceVariant: Record<TabBarSurfaceMode, ViewStyle> = StyleSheet.create({
-  glass: { backgroundColor: "transparent" },
-  blur: { ...iosShadow, backgroundColor: "transparent" },
-  solid: {
-    backgroundColor: TAB_BAR_SURFACE.solidFill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: TAB_BAR_SURFACE.solidBorder,
-    elevation: TAB_BAR_SURFACE.androidElevation,
-  },
+  glass: { backgroundColor: "transparent", boxShadow: TAB_BAR_SURFACE.shadow },
+  blur: { backgroundColor: "transparent", boxShadow: TAB_BAR_SURFACE.shadow },
+  frosted: { backgroundColor: "transparent", boxShadow: TAB_BAR_SURFACE.shadow },
   opaque: {
-    ...iosShadow,
     backgroundColor: TAB_BAR_SURFACE.opaqueFill,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: TAB_BAR_SURFACE.opaqueBorder,
-    elevation: TAB_BAR_SURFACE.androidElevation,
+    boxShadow: TAB_BAR_SURFACE.shadow,
   },
 });
 
@@ -292,6 +355,10 @@ const styles = StyleSheet.create({
     left: 0,
     borderCurve: "continuous",
     backgroundColor: colors.tabSelection,
+  },
+  pillGlass: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: TAB_BAR_SURFACE.glassPillBorder,
   },
   row: {
     flex: 1,
@@ -316,7 +383,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontSize: TAB_LABEL_SIZE,
     lineHeight: TAB_LABEL_LINE,
-    color: colors.text,
+    color: LABEL_INACTIVE,
     includeFontPadding: false,
   },
   labelFocused: {

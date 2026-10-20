@@ -1,10 +1,8 @@
 // Pure OTP helpers (no React Native imports, so they unit-test in isolation).
 
-// Digits in the email verification code. The mock shows 4 boxes.
-// FLAG: Supabase email OTP is 6 digits by default (configurable in Supabase
-// Auth settings). Either configure the backend to 4 or set this to 6; the UI
-// supports 4-8.
-export const OTP_LENGTH = 4;
+// Supabase email OTP default length (Auth > Email settings); keep in sync.
+// The UI supports 4-8 boxes; 6 fit at 360dp (45px each, see tests).
+export const OTP_LENGTH = 6;
 
 // Wait before "Didn't receive code?" can resend.
 export const RESEND_COOLDOWN_MS = 60_000;

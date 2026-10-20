@@ -24,6 +24,11 @@ export function getGreeting(date: Date): string {
   return "Good evening";
 }
 
+// "  Ama Serwaa Mensah " -> "Ama", blank -> "".
+export function getFirstName(fullName: string): string {
+  return fullName.trim().split(/\s+/)[0] ?? "";
+}
+
 // "James Mensah" -> "JM", "James" -> "J", blank -> "".
 export function getInitials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);

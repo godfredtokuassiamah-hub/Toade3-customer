@@ -7,8 +7,7 @@ import {
   View,
 } from "react-native";
 
-import type { FoodItem } from "../../data/mock/home";
-import { FoodCard } from "./FoodCard";
+import { FoodCard, type FoodCardItem } from "./FoodCard";
 
 const SIDE_PADDING = 14;
 const GAP = 10;
@@ -22,23 +21,23 @@ function Separator() {
   return <View style={styles.separator} />;
 }
 
-const keyExtractor = (item: FoodItem) => item.id;
+const keyExtractor = (item: FoodCardItem) => item.id;
 
 // Horizontal, snapping row of food cards. No onScroll: carousel swipes never
 // reach the Home feed's tab bar compaction.
-export const FoodRow = memo(function FoodRow({ items }: { items: FoodItem[] }) {
+export const FoodRow = memo(function FoodRow({ items }: { items: FoodCardItem[] }) {
   const { width } = useWindowDimensions();
   const cardWidth = getFoodCardWidth(width);
   const interval = cardWidth + GAP;
 
-  const renderItem = useCallback<ListRenderItem<FoodItem>>(
+  const renderItem = useCallback<ListRenderItem<FoodCardItem>>(
     ({ item }) => <FoodCard item={item} width={cardWidth} />,
     [cardWidth],
   );
 
   // Separator (not `gap`) so these offsets stay exact.
   const getItemLayout = useCallback(
-    (_: ArrayLike<FoodItem> | null | undefined, index: number) => ({
+    (_: ArrayLike<FoodCardItem> | null | undefined, index: number) => ({
       length: cardWidth,
       offset: SIDE_PADDING + index * interval,
       index,

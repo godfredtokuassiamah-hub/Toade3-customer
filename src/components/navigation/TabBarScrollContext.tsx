@@ -9,8 +9,6 @@ import {
   withTiming,
 } from "react-native-reanimated";
 
-import type { CompactionState } from "./scrollCompaction";
-
 // Expand/compact timing, reused by Home's scroll handler.
 export const COMPACTION_TIMING = {
   duration: 200,
@@ -20,7 +18,12 @@ export const COMPACTION_TIMING = {
 export type TabBarScrollValue = {
   // 0 = expanded, 1 = compact.
   progress: SharedValue<number>;
-  compaction: SharedValue<CompactionState>;
+  // Compaction state as primitive shared values (never an object shared value:
+  // a mutable object read-modified-written on the scroll path is the fragile
+  // shape we avoid). `compact` is the current state, `travel` the accumulated
+  // hysteresis distance.
+  compact: SharedValue<boolean>;
+  travel: SharedValue<number>;
   // Callable from JS and from worklets.
   expand: () => void;
 };
@@ -29,20 +32,19 @@ const TabBarScrollContext = createContext<TabBarScrollValue | null>(null);
 
 export function TabBarScrollProvider({ children }: { children: ReactNode }) {
   const progress = useSharedValue(0);
-  const compaction = useSharedValue<CompactionState>({
-    compact: false,
-    travel: 0,
-  });
+  const compact = useSharedValue(false);
+  const travel = useSharedValue(0);
 
   const expand = useCallback(() => {
     "worklet";
-    compaction.set({ compact: false, travel: 0 });
+    compact.set(false);
+    travel.set(0);
     progress.set(withTiming(0, COMPACTION_TIMING));
-  }, [compaction, progress]);
+  }, [compact, travel, progress]);
 
   const value = useMemo(
-    () => ({ progress, compaction, expand }),
-    [progress, compaction, expand],
+    () => ({ progress, compact, travel, expand }),
+    [progress, compact, travel, expand],
   );
 
   return (

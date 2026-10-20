@@ -5,11 +5,33 @@ import { colors, fontFamily } from "../../theme";
 import { Icon } from "../ui/Icon";
 
 // Section title with a "see all" chevron, left aligned like the mock.
+// With onViewAll (filtered Home), a trailing "View all" opens the results.
 export const SectionHeader = memo(function SectionHeader({
   title,
+  onViewAll,
 }: {
   title: string;
+  onViewAll?: () => void;
 }) {
+  if (onViewAll) {
+    return (
+      <View style={[styles.container, styles.split]}>
+        <Text style={[styles.title, styles.flex]} accessibilityRole="header" numberOfLines={1}>
+          {title}
+        </Text>
+        <Pressable
+          onPress={onViewAll}
+          accessibilityRole="button"
+          accessibilityLabel={`View all ${title}`}
+          hitSlop={8}
+          style={({ pressed }) => [styles.row, styles.viewAll, pressed && styles.pressed]}
+        >
+          <Text style={styles.viewAllText}>View all</Text>
+          <Icon name="chevronRight" size={12} color={colors.primary} weight="semibold" />
+        </Pressable>
+      </View>
+    );
+  }
   return (
     <View style={styles.container}>
       <Pressable
@@ -41,10 +63,27 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     alignItems: "flex-start",
   },
+  split: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  flex: {
+    flex: 1,
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  viewAll: {
+    gap: 4,
+    minHeight: 44,
+  },
+  viewAllText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: 14,
+    color: colors.primary,
   },
   title: {
     fontFamily: fontFamily.semibold,

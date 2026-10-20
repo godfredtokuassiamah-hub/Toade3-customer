@@ -14,9 +14,10 @@ function safe(check: () => boolean): boolean {
 
 // Read once: both checks are static for the app's lifetime. The API check
 // guards iOS 26 betas that crash in GlassView (expo/expo#40911).
-const LIQUID_GLASS =
-  Platform.OS === "ios" &&
-  safe(() => isLiquidGlassAvailable() && isGlassEffectAPIAvailable());
+const IS_IOS = Platform.OS === "ios";
+const LIQUID_GLASS_AVAILABLE = IS_IOS && safe(isLiquidGlassAvailable);
+const GLASS_API_AVAILABLE = IS_IOS && safe(isGlassEffectAPIAvailable);
+const LIQUID_GLASS = LIQUID_GLASS_AVAILABLE && GLASS_API_AVAILABLE;
 
 // Android resolves false; web has no such API (throws), so treat it as false.
 function readReduceTransparency(): Promise<boolean> {
@@ -60,11 +61,30 @@ export function useReduceTransparency(): boolean {
   return enabled;
 }
 
+// Dev-only: one Metro line per launch so a device run shows which material
+// the bar picked and why.
+let loggedSurface = false;
+
 export function useTabBarSurface(): TabBarSurfaceMode {
   const reduceTransparency = useReduceTransparency();
-  return resolveTabBarSurface({
+  const mode = resolveTabBarSurface({
     os: Platform.OS,
     liquidGlass: LIQUID_GLASS,
     reduceTransparency,
   });
+
+  useEffect(() => {
+    if (!__DEV__ || loggedSurface) return;
+    loggedSurface = true;
+    console.log("[tabbar] surface", {
+      os: Platform.OS,
+      version: Platform.Version,
+      liquidGlass: LIQUID_GLASS_AVAILABLE,
+      glassApi: GLASS_API_AVAILABLE,
+      reduceTransparency,
+      mode,
+    });
+  }, [mode, reduceTransparency]);
+
+  return mode;
 }

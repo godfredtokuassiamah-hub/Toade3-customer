@@ -27,14 +27,18 @@ import { getLanguageName, LanguageSheet } from "../components/language";
 import { Collapse } from "../components/ui/Collapse";
 import { KeyboardAwareScreen } from "../components/ui/KeyboardAwareScreen";
 import { PrimaryButton } from "../components/ui/PrimaryButton";
+import { RATE_LIMIT_MESSAGE } from "../lib/auth/authErrors";
 import { formatCountdown, OTP_LENGTH, parseSentAt } from "../lib/auth/otp";
+import { routeForProfile, withTimeout } from "../lib/auth/profileCompletion";
 import { errorHaptic, lightHaptic, successHaptic } from "../lib/haptics";
 import { isValidEmail, normalizeEmail } from "../lib/validation/email";
 import {
   isInvalidCodeError,
+  isRateLimitedError,
   requestEmailCode,
   verifyEmailCode,
 } from "../services/auth";
+import { fetchMyProfile } from "../services/profile";
 import { colors, fontFamily, text } from "../theme";
 
 // Same frame as sign-in (copied, not imported, so the screens stay independent).
@@ -51,6 +55,10 @@ const VERIFY_ERROR =
   "Something went wrong. Check your connection and try again.";
 const RESENT_MESSAGE = "Code sent again";
 const RESEND_ERROR = "We couldn't resend the code. Try again.";
+const PROFILE_ERROR =
+  "You're signed in, but we couldn't load your account. Check your connection and try again.";
+// Post-verify profile check; past this the user gets the retry state.
+const PROFILE_TIMEOUT_MS = 8000;
 
 type ResendStatus = "sent" | "error" | null;
 
@@ -80,6 +88,10 @@ export default function VerifyCode() {
   const [verifying, setVerifying] = useState(false);
   const [sending, setSending] = useState(false);
   const [resendStatus, setResendStatus] = useState<ResendStatus>(null);
+  const [resendError, setResendError] = useState(RESEND_ERROR);
+  // Set once verifyOtp succeeds. The OTP is single-use, so after this only
+  // the profile check is retried, never the code.
+  const [signedIn, setSignedIn] = useState(false);
   const [languageCode, setLanguageCode] = useState("EN");
   const [languageSheetOpen, setLanguageSheetOpen] = useState(false);
 
@@ -151,23 +163,48 @@ export default function VerifyCode() {
     setResendStatus(null);
   };
 
+  // New-user detection: no name/phone -> /complete-profile, no address ->
+  // /complete-address, else /home.
+  // The button keeps its spinner until this resolves.
+  const routeAfterAuth = async () => {
+    if (verifyingRef.current) return;
+    verifyingRef.current = true;
+    setVerifying(true);
+    setErrorMessage(null);
+    try {
+      const profile = await withTimeout(fetchMyProfile(), PROFILE_TIMEOUT_MS);
+      if (!mounted.current) return;
+      successHaptic();
+      // Clear sign-in/verify so back on the next screen exits the app.
+      if (router.canDismiss()) router.dismissAll();
+      router.replace(routeForProfile(profile));
+    } catch {
+      if (!mounted.current) return;
+      errorHaptic();
+      setErrorMessage(PROFILE_ERROR);
+      AccessibilityInfo.announceForAccessibility(PROFILE_ERROR);
+    } finally {
+      verifyingRef.current = false;
+      if (mounted.current) setVerifying(false);
+    }
+  };
+
   const verify = async (c: string) => {
     if (verifyingRef.current || c.length !== OTP_LENGTH) return;
     verifyingRef.current = true;
     setVerifying(true);
     setErrorMessage(null);
+    let verified = false;
     try {
       await verifyEmailCode(email, c);
-      if (!mounted.current) return;
-      successHaptic();
-      // TODO(auth): session/profile bootstrap goes here before Home.
-      // Clear sign-in/verify so back on Home exits the app.
-      if (router.canDismiss()) router.dismissAll();
-      router.replace("/home");
+      verified = true;
     } catch (err) {
       if (!mounted.current) return;
       errorHaptic();
-      if (isInvalidCodeError(err)) {
+      if (isRateLimitedError(err)) {
+        setErrorMessage(RATE_LIMIT_MESSAGE);
+        AccessibilityInfo.announceForAccessibility(RATE_LIMIT_MESSAGE);
+      } else if (isInvalidCodeError(err)) {
         // Wrong code: vibrate + shake, then clear. No red boxes or visible
         // message; screen-reader users still hear why the code cleared.
         setShakeKey((k) => k + 1);
@@ -183,8 +220,12 @@ export default function VerifyCode() {
       }
     } finally {
       verifyingRef.current = false;
-      if (mounted.current) setVerifying(false);
+      if (mounted.current && !verified) setVerifying(false);
     }
+    if (!verified || !mounted.current) return;
+    setSignedIn(true);
+    setResendStatus(null);
+    await routeAfterAuth();
   };
 
   const resend = async () => {
@@ -198,11 +239,13 @@ export default function VerifyCode() {
       setResendStatus("sent");
       lightHaptic();
       AccessibilityInfo.announceForAccessibility(RESENT_MESSAGE);
-    } catch {
+    } catch (err) {
       if (!mounted.current) return;
+      const message = isRateLimitedError(err) ? RATE_LIMIT_MESSAGE : RESEND_ERROR;
+      setResendError(message);
       setResendStatus("error");
       errorHaptic();
-      AccessibilityInfo.announceForAccessibility(RESEND_ERROR);
+      AccessibilityInfo.announceForAccessibility(message);
     } finally {
       if (mounted.current) setSending(false);
     }
@@ -245,7 +288,7 @@ export default function VerifyCode() {
               onComplete={(c) => void verify(c)}
               shakeKey={shakeKey}
               errorMessage={errorMessage ?? undefined}
-              disabled={verifying}
+              disabled={verifying || signedIn}
               testID="otp-input"
             />
           </View>
@@ -260,13 +303,15 @@ export default function VerifyCode() {
           {/* revealRef target: button + resend link stay above the keyboard. */}
           <View ref={actionsRef} collapsable={false} style={styles.actions}>
             <PrimaryButton
-              label="Verify and continue"
-              onPress={() => void verify(code)}
-              disabled={code.length !== OTP_LENGTH}
+              label={signedIn ? "Try again" : "Verify and continue"}
+              onPress={() =>
+                void (signedIn ? routeAfterAuth() : verify(code))
+              }
+              disabled={!signedIn && code.length !== OTP_LENGTH}
               loading={verifying}
             />
             <View style={styles.resend}>
-              {sending ? (
+              {signedIn ? null : sending ? (
                 <Text style={styles.resendMuted}>Sending...</Text>
               ) : ready ? (
                 <Pressable
@@ -298,7 +343,7 @@ export default function VerifyCode() {
                 ]}
                 accessibilityLiveRegion="polite"
               >
-                {resendStatus === "error" ? RESEND_ERROR : RESENT_MESSAGE}
+                {resendStatus === "error" ? resendError : RESENT_MESSAGE}
               </Text>
             </Collapse>
           </View>

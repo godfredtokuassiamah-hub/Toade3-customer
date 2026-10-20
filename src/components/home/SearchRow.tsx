@@ -1,16 +1,21 @@
+import { router } from "expo-router";
 import { memo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { colors, fontFamily } from "../../theme";
+import { useFiltersTrigger } from "../filters/useFiltersTrigger";
 import { Icon } from "../ui/Icon";
 
-// Search entry + Filter pill. Both are buttons for now (no inline input).
-export const SearchRow = memo(function SearchRow() {
+// Two entry points: the search field opens P11 Search, the Filter control
+// opens the separate P12 Filters sheet for Home (focus returns here when it
+// closes).
+export const SearchRow = memo(function SearchRow({ filterCount = 0 }: { filterCount?: number }) {
+  const { triggerRef, openFilters } = useFiltersTrigger();
+  const label = filterCount > 0 ? `Filters (${filterCount})` : "Filter";
   return (
     <View style={styles.row}>
       <Pressable
-        // TODO(search): open the search screen.
-        onPress={() => {}}
+        onPress={() => router.push("/search")}
         accessibilityRole="search"
         accessibilityLabel="Search for items"
         style={({ pressed }) => [styles.search, pressed && styles.pressed]}
@@ -21,13 +26,13 @@ export const SearchRow = memo(function SearchRow() {
         </Text>
       </Pressable>
       <Pressable
-        // TODO(filter): open the filter sheet.
-        onPress={() => {}}
+        ref={triggerRef}
+        onPress={() => openFilters({ surface: "home" })}
         accessibilityRole="button"
-        accessibilityLabel="Filter"
-        style={({ pressed }) => [styles.filter, pressed && styles.pressed]}
+        accessibilityLabel={filterCount > 0 ? `Filters, ${filterCount} applied` : "Filter"}
+        style={({ pressed }) => [styles.filter, filterCount > 0 && styles.filterActive, pressed && styles.pressed]}
       >
-        <Text style={styles.filterText}>Filter</Text>
+        <Text style={styles.filterText}>{label}</Text>
         <Icon name="filter" size={18} color={colors.text} />
       </Pressable>
     </View>
@@ -43,7 +48,7 @@ const styles = StyleSheet.create({
   },
   search: {
     flex: 1,
-    height: 44,
+    minHeight: 44,
     borderRadius: 22,
     backgroundColor: colors.surfaceMuted,
     flexDirection: "row",
@@ -58,13 +63,18 @@ const styles = StyleSheet.create({
     color: colors.placeholder,
   },
   filter: {
-    height: 44,
+    minHeight: 44,
     borderRadius: 22,
     backgroundColor: colors.surfaceMuted,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
     paddingHorizontal: 16,
+  },
+  filterActive: {
+    borderWidth: 1.5,
+    borderColor: colors.text,
+    backgroundColor: colors.white,
   },
   filterText: {
     fontFamily: fontFamily.regular,

@@ -9,6 +9,8 @@ export const TAB_BAR_COMPACT_DELTA = 8;
 // Inner padding on every side; the selection pill sits inside it.
 export const TAB_BAR_PADDING = 6;
 export const TAB_BAR_BOTTOM_GAP = 12;
+// The sliding pill is this much narrower than its cell on each side.
+export const TAB_PILL_INSET_X = 4;
 export const TAB_ICON_SIZE = 24;
 export const TAB_ICON_LABEL_GAP = 2;
 export const TAB_LABEL_SIZE = 11;

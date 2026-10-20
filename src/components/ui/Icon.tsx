@@ -43,6 +43,37 @@ const ICONS = {
   arrowLeft: { sf: "arrow.left", material: "arrow_back" },
   check: { sf: "checkmark", material: "check" },
   location: { sf: "mappin.and.ellipse", material: "location_on" },
+  // Location arrow (current location row).
+  navigation: { sf: "location", sfFilled: "location.fill", material: "near_me" },
+  // Outline pin (saved address rows).
+  pin: { sf: "mappin", material: "location_on" },
+  recenter: { sf: "scope", material: "my_location" },
+  // Search sheet: clear field, stores and category tiles.
+  clearField: { sf: "xmark.circle.fill", material: "cancel" },
+  store: { sf: "storefront", material: "storefront" },
+  localDishes: { sf: "fork.knife", material: "restaurant" },
+  riceMeals: { sf: "takeoutbag.and.cup.and.straw", material: "rice_bowl" },
+  snacks: { sf: "birthday.cake", material: "cookie" },
+  drinks: { sf: "cup.and.saucer", material: "local_cafe" },
+  produce: { sf: "leaf", material: "nutrition" },
+  dairy: { sf: "cart", material: "egg" },
+  bakery: { sf: "birthday.cake", material: "bakery_dining" },
+  grains: { sf: "basket", material: "grain" },
+  beverages: { sf: "waterbottle", material: "local_drink" },
+  household: { sf: "bubbles.and.sparkles", material: "cleaning_services" },
+  gadgets: { sf: "desktopcomputer", material: "devices" },
+  // Home category grid: extra store categories.
+  gifts: { sf: "gift", sfFilled: "gift.fill", material: "redeem" },
+  homeDiy: { sf: "lamp.desk", material: "light" },
+  sports: { sf: "dumbbell", sfFilled: "dumbbell.fill", material: "fitness_center" },
+  pharmacy: { sf: "cross.case", sfFilled: "cross.case.fill", material: "medication" },
+  flowers: { sf: "leaf", material: "local_florist" },
+  healthBeauty: { sf: "sparkles", material: "spa" },
+  // Favourites heart toggle (FavouriteButton, product page later).
+  heart: { sf: "heart", sfFilled: "heart.fill", material: "favorite" },
+  heartFilled: { sf: "heart.fill", sfFilled: "heart.fill", material: "favorite" },
+  // Filters sheet: "Up to GHS 50" quick filter.
+  banknote: { sf: "banknote", material: "payments" },
 } satisfies Record<string, IconSpec>;
 
 export type IconName = keyof typeof ICONS;

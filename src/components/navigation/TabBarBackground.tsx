@@ -1,31 +1,31 @@
-// Material layers behind the tab bar content, one set per surface mode.
-// All layers are static except their corner radius, which follows the bar
-// height. Never set or animate opacity here or on any parent: opacity on a
-// GlassView or its ancestors stops the glass rendering (expo-glass-effect
-// known issue, expo/expo#41024).
+// Material layers behind the tab bar content, one stack per surface mode
+// (bottom -> top):
+// - glass:   GlassView, soft sheen, top highlight, hairline outline
+// - blur:    BlurView, white overlay, sheen, highlight, outline
+// - frosted: translucent fill, sheen, highlight, outline
+// - opaque:  nothing here (fill and border live on the surface itself)
+//
+// Everything is static: no animated size, radius or opacity, and no
+// createAnimatedComponent around GlassView/BlurView (an animated radius on the
+// native material crashed Home on scroll). Never set opacity here or on any
+// parent: opacity on a GlassView or its ancestors stops the glass rendering
+// (expo-glass-effect known issue, expo/expo#41024).
 import { BlurView } from "expo-blur";
 import { GlassView } from "expo-glass-effect";
+import { LinearGradient } from "expo-linear-gradient";
 import { StyleSheet, View } from "react-native";
-import Animated, { type SharedValue, useAnimatedStyle } from "react-native-reanimated";
 
 import { TAB_BAR_SURFACE, type TabBarSurfaceMode } from "./tabBarSurface";
 
-const AnimatedGlassView = Animated.createAnimatedComponent(GlassView);
-const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
-
 type Props = {
   mode: TabBarSurfaceMode;
-  // Current bar height; every layer uses height / 2 as its radius.
-  height: SharedValue<number>;
+  // Static corner radius (half the fixed bar height).
+  radius: number;
 };
 
-export function TabBarBackground({ mode, height }: Props) {
-  const radiusStyle = useAnimatedStyle(() => ({
-    borderRadius: height.get() / 2,
-  }));
-
-  // Opaque: fill and border live on the surface itself.
+export function TabBarBackground({ mode, radius }: Props) {
   if (mode === "opaque") return null;
+  const round = { borderRadius: radius };
 
   return (
     <View
@@ -35,9 +35,8 @@ export function TabBarBackground({ mode, height }: Props) {
       importantForAccessibility="no-hide-descendants"
     >
       {mode === "glass" ? (
-        // Native material draws its own edge highlight and depth.
-        <AnimatedGlassView
-          style={[styles.layer, radiusStyle]}
+        <GlassView
+          style={[styles.layer, round]}
           glassEffectStyle="regular"
           colorScheme="light"
           isInteractive={false}
@@ -45,18 +44,31 @@ export function TabBarBackground({ mode, height }: Props) {
         />
       ) : null}
       {mode === "blur" ? (
-        <>
-          <AnimatedBlurView
-            tint="light"
+        <View style={[styles.layer, styles.clip, round]}>
+          <BlurView
+            tint={TAB_BAR_SURFACE.blurTint}
             intensity={TAB_BAR_SURFACE.blurIntensity}
-            style={[styles.layer, styles.clip, radiusStyle]}
+            style={StyleSheet.absoluteFill}
           />
-          <Animated.View style={[styles.layer, styles.overlay, radiusStyle]} />
-        </>
+          <View style={[StyleSheet.absoluteFill, styles.overlay]} />
+        </View>
       ) : null}
-      {mode === "blur" || mode === "solid" ? (
-        <Animated.View style={[styles.layer, styles.highlight, radiusStyle]} />
+      {mode === "frosted" ? (
+        <View style={[styles.layer, styles.frosted, round]} />
       ) : null}
+      <View style={[styles.layer, styles.clip, round]}>
+        <LinearGradient
+          colors={
+            mode === "glass" ? TAB_BAR_SURFACE.glassSheen : TAB_BAR_SURFACE.sheen
+          }
+          locations={mode === "glass" ? null : TAB_BAR_SURFACE.sheenLocations}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+      <View style={[styles.layer, styles.highlight, round]} />
+      <View style={[styles.layer, styles.outline, round]} />
     </View>
   );
 }
@@ -72,12 +84,18 @@ const styles = StyleSheet.create({
   overlay: {
     backgroundColor: TAB_BAR_SURFACE.blurOverlay,
   },
-  // 1px light rim along the upper edge only.
+  frosted: {
+    backgroundColor: TAB_BAR_SURFACE.frostedFill,
+  },
   highlight: {
     borderTopWidth: 1,
     borderTopColor: TAB_BAR_SURFACE.highlight,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
     borderBottomColor: "transparent",
+  },
+  outline: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: TAB_BAR_SURFACE.outline,
   },
 });

@@ -28,13 +28,14 @@ import {
 import { getLanguageName, LanguageSheet } from "../components/language";
 import { KeyboardAwareScreen } from "../components/ui/KeyboardAwareScreen";
 import { PrimaryButton } from "../components/ui/PrimaryButton";
+import { RATE_LIMIT_MESSAGE } from "../lib/auth/authErrors";
 import { errorHaptic } from "../lib/haptics";
 import {
   isValidEmail,
   normalizeEmail,
   suggestEmail,
 } from "../lib/validation/email";
-import { requestEmailCode } from "../services/auth";
+import { isRateLimitedError, requestEmailCode } from "../services/auth";
 import { colors, text } from "../theme";
 
 const RADIUS = 24;
@@ -129,8 +130,10 @@ export default function SignIn() {
         pathname: "/verify-code",
         params: { email: normalized, sentAt: String(Date.now()) },
       });
-    } catch {
-      setRequestError(REQUEST_ERROR);
+    } catch (err) {
+      setRequestError(
+        isRateLimitedError(err) ? RATE_LIMIT_MESSAGE : REQUEST_ERROR,
+      );
       errorHaptic();
     } finally {
       setLoading(false);
