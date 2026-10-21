@@ -59,7 +59,8 @@ import { useTabBarSurface } from "./useTabBarSurface";
 
 const TABS: Record<string, { icon: IconName; label: string }> = {
   home: { icon: "home", label: "Home" },
-  explore: { icon: "explore", label: "Explore" },
+  stores: { icon: "store", label: "Stores" },
+  map: { icon: "map", label: "Map" },
   orders: { icon: "orders", label: "Orders" },
   account: { icon: "account", label: "Account" },
 };
@@ -75,9 +76,9 @@ const BOUNCE_OUT_MS = 150;
 const PRESS_SCALE = 0.97;
 const PRESS_MS = 120;
 const ICON_FADE_MS = 180;
-// Inactive #6B6B6B is 5.3:1 on white (AA); active #111111 is ~17:1.
-const LABEL_INACTIVE = colors.textMuted;
-const LABEL_ACTIVE = colors.text;
+// Active black; inactive grey, matching the inactive icons.
+const LABEL_INACTIVE = colors.tabInactive;
+const LABEL_ACTIVE = colors.tabActive;
 
 type Navigation = BottomTabBarProps["navigation"];
 type Route = BottomTabBarProps["state"]["routes"][number];
@@ -203,14 +204,17 @@ const TabItem = memo(function TabItem({
             <Icon name={icon} size={TAB_ICON_SIZE} color={colors.tabInactive} />
           </Animated.View>
           <Animated.View style={[StyleSheet.absoluteFill, filledStyle]}>
-            <Icon name={icon} size={TAB_ICON_SIZE} color={colors.primary} filled />
+            <Icon name={icon} size={TAB_ICON_SIZE} color={colors.tabActive} filled />
           </Animated.View>
         </Animated.View>
-        {/* Capped at 1.4x so "Account" fits a 77pt cell; iOS shows the Large
+        {/* Capped at 1.3x so "Account" fits the 61.6pt cell (5 tabs at
+            360dp), shrinking slightly as a last resort; iOS shows the Large
             Content Viewer above that. */}
         <Animated.Text
           style={[styles.label, focused && styles.labelFocused, labelStyle]}
           numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.85}
           allowFontScaling
           maxFontSizeMultiplier={TAB_LABEL_MAX_SCALE}
         >
@@ -371,8 +375,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  // Stretched to the cell so the label's width is bounded (shrink-to-fit).
   itemContent: {
+    alignSelf: "stretch",
     alignItems: "center",
+    paddingHorizontal: 2,
   },
   iconBox: {
     width: TAB_ICON_SIZE,

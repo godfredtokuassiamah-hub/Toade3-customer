@@ -5,13 +5,16 @@ import { colors, fontFamily } from "../../theme";
 import { Icon } from "../ui/Icon";
 
 // Section title with a "see all" chevron, left aligned like the mock.
-// With onViewAll (filtered Home), a trailing "View all" opens the results.
+// With onViewAll, a trailing action ("View all" on filtered Home, "See all"
+// on Stores via actionLabel) opens the full list.
 export const SectionHeader = memo(function SectionHeader({
   title,
   onViewAll,
+  actionLabel = "View all",
 }: {
   title: string;
   onViewAll?: () => void;
+  actionLabel?: string;
 }) {
   if (onViewAll) {
     return (
@@ -22,11 +25,11 @@ export const SectionHeader = memo(function SectionHeader({
         <Pressable
           onPress={onViewAll}
           accessibilityRole="button"
-          accessibilityLabel={`View all ${title}`}
+          accessibilityLabel={`${actionLabel} ${title}`}
           hitSlop={8}
           style={({ pressed }) => [styles.row, styles.viewAll, pressed && styles.pressed]}
         >
-          <Text style={styles.viewAllText}>View all</Text>
+          <Text style={styles.viewAllText}>{actionLabel}</Text>
           <Icon name="chevronRight" size={12} color={colors.primary} weight="semibold" />
         </Pressable>
       </View>

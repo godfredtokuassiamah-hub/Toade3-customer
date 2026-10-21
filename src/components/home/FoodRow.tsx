@@ -31,7 +31,8 @@ export const FoodRow = memo(function FoodRow({ items }: { items: FoodCardItem[] 
   const interval = cardWidth + GAP;
 
   const renderItem = useCallback<ListRenderItem<FoodCardItem>>(
-    ({ item }) => <FoodCard item={item} width={cardWidth} />,
+    // Heart on: Home rows and the filtered Home item modules both use this.
+    ({ item }) => <FoodCard item={item} width={cardWidth} showFavourite />,
     [cardWidth],
   );
 

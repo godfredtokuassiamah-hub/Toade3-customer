@@ -24,8 +24,8 @@ describe("getTabBarWidth", () => {
 
 describe("getTabCellWidth", () => {
   test.each([
-    [402, 87.5],
-    [360, 77],
+    [402, 70],
+    [360, 61.6],
   ])("window %p -> %p (>= 48)", (windowWidth, expected) => {
     const cell = getTabCellWidth(windowWidth);
     expect(cell).toBe(expected);
@@ -37,7 +37,7 @@ describe("getTabBarHeights", () => {
   test.each([
     [1.0, 68, 60],
     [1.3, 73, 65],
-    [2.0, 74, 66],
+    [2.0, 73, 65],
   ])("fontScale %p -> %p / %p", (fontScale, expanded, compact) => {
     expect(getTabBarHeights(fontScale)).toEqual({ expanded, compact });
   });
