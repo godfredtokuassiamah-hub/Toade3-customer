@@ -3,12 +3,17 @@
 // items without one render a placeholder card.
 import type { ImageSourcePropType } from "react-native";
 
+import { getVendorIdForItem } from "./catalog";
 import { foodImages } from "./foodImages";
 
 export type FoodItem = {
   id: string;
   name: string;
   vendor: string;
+  // Owning vendor id; tapping the card opens this vendor's storefront. Every
+  // static Home id is a real catalog item id, so it is resolved from the
+  // catalog in `withImages` below.
+  vendorId: string;
   priceGhs: number;
   etaMins: number;
   // Local require() asset; undefined until the photo is added.
@@ -47,13 +52,25 @@ export type HomeData = {
   popularPlaces: PopularPlace[];
 };
 
-function withImages(items: Omit<FoodItem, "image">[]): FoodItem[] {
-  return items.map((item) => ({ ...item, image: foodImages[item.id] }));
+function withImages(items: Omit<FoodItem, "image" | "vendorId">[]): FoodItem[] {
+  return items.map((item) => ({
+    ...item,
+    // Every static Home id is a real catalog item id; fall back to "" so a
+    // missing lookup is caught by the storefront's not-found state rather
+    // than crashing (no current id misses).
+    vendorId: getVendorIdForItem(item.id) ?? "",
+    image: foodImages[item.id],
+  }));
 }
 
 export const homeData: HomeData = {
-  // No avatar file yet: Avatar falls back to initials.
-  user: { firstName: "James", fullName: "James Mensah" },
+  user: {
+    firstName: "James",
+    fullName: "James Mensah",
+    avatar: {
+      uri: "https://i.pinimg.com/1200x/a2/f0/37/a2f037f7c1a396a74a4d806965462037.jpg",
+    },
+  },
   locationLabel: "University Avenue",
   banners: {
     top: {
@@ -97,14 +114,14 @@ export const homeData: HomeData = {
         },
         {
           id: "lm-waakye",
-          name: "Waakye Special",
+          name: "Yam Chips & Fried Chicken",
           vendor: "Auntie Ama's Waakye",
           priceGhs: 30,
           etaMins: 15,
         },
         {
           id: "lm-banku-tilapia",
-          name: "Banku & Grilled Tilapia",
+          name: "Banku & Okro Stew",
           vendor: "Lakeside Chop Bar",
           priceGhs: 55,
           etaMins: 25,
@@ -125,14 +142,14 @@ export const homeData: HomeData = {
       items: withImages([
         {
           id: "dr-matcha-bubble-tea",
-          name: "Matcha Bubble Tea",
+          name: "Raspberry Iced Tea",
           vendor: "Green Bowl Kitchen",
           priceGhs: 28,
           etaMins: 12,
         },
         {
           id: "dr-bliss-sparkling-juice",
-          name: "Bliss Sparkling Juice",
+          name: "Tropical Mango Soda",
           vendor: "Campus Mart",
           priceGhs: 8,
           etaMins: 8,
@@ -146,21 +163,21 @@ export const homeData: HomeData = {
         },
         {
           id: "dr-orange-juice",
-          name: "Fresh Orange Juice",
+          name: "Classic Cola (Can)",
           vendor: "Juice Hub",
           priceGhs: 15,
           etaMins: 10,
         },
         {
           id: "dr-iced-coffee",
-          name: "Iced Caramel Coffee",
+          name: "Iced Lemon Tea",
           vendor: "Brew Corner",
           priceGhs: 25,
           etaMins: 12,
         },
         {
           id: "dr-mango-smoothie",
-          name: "Mango Smoothie",
+          name: "Strawberry Coconut Smoothie",
           vendor: "Sweet Sip Bar",
           priceGhs: 22,
           etaMins: 12,
@@ -173,35 +190,35 @@ export const homeData: HomeData = {
       items: withImages([
         {
           id: "bk-sliced-bread",
-          name: "Sliced White Bread",
+          name: "Deli Sandwich Trio",
           vendor: "Golden Crust Bakery",
           priceGhs: 20,
           etaMins: 15,
         },
         {
           id: "bk-chocolate-cake",
-          name: "Chocolate Fudge Cake",
+          name: "Strawberry Cream Roll Cake",
           vendor: "Sweet Tooth Desserts",
           priceGhs: 35,
           etaMins: 20,
         },
         {
           id: "bk-meat-pie",
-          name: "Meat Pie",
+          name: "Toasted Ham & Cheese Sub",
           vendor: "Golden Crust Bakery",
           priceGhs: 12,
           etaMins: 15,
         },
         {
           id: "bk-croissant",
-          name: "Butter Croissant",
+          name: "Vanilla Cream Roll",
           vendor: "Le Petit Café",
           priceGhs: 18,
           etaMins: 15,
         },
         {
           id: "bk-doughnuts",
-          name: "Glazed Doughnuts (2 pcs)",
+          name: "Strawberry Roll Slices (6 pcs)",
           vendor: "Sweet Tooth Desserts",
           priceGhs: 16,
           etaMins: 15,

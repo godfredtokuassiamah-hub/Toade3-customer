@@ -6,6 +6,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { DiscoveryContextSync } from "../components/discovery/DiscoveryContextSync";
 import { FavouritesProvider } from "../lib/favourites/FavouritesContext";
@@ -33,6 +34,7 @@ export default function RootLayout() {
   // Hide the native header on every screen; screens render full-bleed.
   // Other routes auto-register.
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <DeliveryAddressProvider>
       <FavouritesProvider>
       {/* New drop-off -> new discovery context revision. */}
@@ -50,13 +52,15 @@ export default function RootLayout() {
             falls back to "modal" on Android. */}
         <Stack.Screen name="location-picker" options={{ presentation: "fullScreenModal" }} />
         {/* Search sheet: transparentModal keeps Home rendered underneath so
-            the sheet's BlurView (iOS) / white overlay (Android) sits over it. */}
+            the sheet's BlurView (iOS) / white overlay (Android) sits over it.
+            No native animation: the screen runs its own entrance/exit. */}
         <Stack.Screen
           name="search"
-          options={{ presentation: "transparentModal", animation: "fade" }}
+          options={{ presentation: "transparentModal", animation: "none" }}
         />
         <Stack.Screen name="search-results" />
         <Stack.Screen name="favourites" />
+        <Stack.Screen name="stores-list" />
         {/* P12 Filters: bottom sheet. transparentModal keeps the opener
             (and the tab bar) rendered underneath, like Search; the sheet,
             its white-glass backdrop, drag-to-dismiss and Android back are
@@ -70,5 +74,6 @@ export default function RootLayout() {
       </Stack>
       </FavouritesProvider>
     </DeliveryAddressProvider>
+    </GestureHandlerRootView>
   );
 }

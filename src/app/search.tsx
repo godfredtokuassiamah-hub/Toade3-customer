@@ -19,7 +19,16 @@ import {
   type TextInput,
   View,
 } from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { scheduleOnRN } from "react-native-worklets";
 
 import { useFiltersTrigger } from "../components/filters/useFiltersTrigger";
 import { ScopeTabs } from "../components/search/ScopeTabs";
@@ -57,6 +66,21 @@ const NOTICE_MS = 3000;
 const PREVIEW_RECENTS = 3;
 const PREVIEW_CATEGORIES = 5;
 const CATEGORIES = getCategoryTaxonomy();
+// Entrance (ease-out cubic, no springs): backdrop, then the scope tabs, the
+// main card and the footer, slightly staggered. Exit is a quick reverse.
+const BACKDROP_MS = 220;
+const TOP_MS = 260;
+const TOP_DELAY = 40;
+const TOP_DROP = 8;
+const CARD_MS = 320;
+const CARD_DELAY = 80;
+const CARD_RISE = 24;
+const CARD_SCALE_FROM = 0.98;
+const FOOTER_MS = 200;
+const FOOTER_DELAY = 140;
+const EXIT_MS = 180;
+const EXIT_DROP = 12;
+const REDUCED_MS = 150;
 
 export default function SearchScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
@@ -75,6 +99,84 @@ export default function SearchScreen() {
   const [recents, setRecents] = useState<string[]>([]);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const inputRef = useRef<TextInput>(null);
+
+  // --- Entrance / exit motion (shared values only in the worklets) ---
+  const reducedMotion = useReducedMotion();
+  const backdrop = useSharedValue(0);
+  const top = useSharedValue(0);
+  const card = useSharedValue(0);
+  const footer = useSharedValue(0);
+  const exit = useSharedValue(0);
+  const closing = useRef(false);
+
+  useEffect(() => {
+    if (reducedMotion) {
+      const fade = { duration: REDUCED_MS };
+      backdrop.set(withTiming(1, fade));
+      top.set(withTiming(1, fade));
+      card.set(withTiming(1, fade));
+      footer.set(withTiming(1, fade));
+      return;
+    }
+    const easing = Easing.out(Easing.cubic);
+    backdrop.set(withTiming(1, { duration: BACKDROP_MS, easing }));
+    top.set(withDelay(TOP_DELAY, withTiming(1, { duration: TOP_MS, easing })));
+    card.set(withDelay(CARD_DELAY, withTiming(1, { duration: CARD_MS, easing })));
+    footer.set(withDelay(FOOTER_DELAY, withTiming(1, { duration: FOOTER_MS, easing })));
+    // Mount-only entrance; Reduce Motion is read once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Primitive copies for the worklets; Reduce Motion = opacity only.
+  const move = reducedMotion ? 0 : 1;
+  const topDrop = TOP_DROP;
+  const cardRise = CARD_RISE;
+  const cardShrink = 1 - CARD_SCALE_FROM;
+  const exitDrop = EXIT_DROP;
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: backdrop.get() * (1 - exit.get()),
+  }));
+  const topStyle = useAnimatedStyle(() => {
+    const p = top.get();
+    return {
+      opacity: p * (1 - exit.get()),
+      transform: [{ translateY: (p - 1) * topDrop * move }],
+    };
+  }, [move]);
+  const cardStyle = useAnimatedStyle(() => {
+    const p = card.get();
+    const e = exit.get();
+    return {
+      opacity: p * (1 - e),
+      transform: [
+        { translateY: ((1 - p) * cardRise + e * exitDrop) * move },
+        { scale: 1 - (1 - p) * cardShrink * move },
+      ],
+    };
+  }, [move]);
+  const footerStyle = useAnimatedStyle(() => ({
+    opacity: footer.get() * (1 - exit.get()),
+  }));
+
+  const goBack = useCallback(() => router.back(), []);
+  // X / Android back: quick reverse, then pop. Guarded against double taps.
+  const requestClose = useCallback(() => {
+    if (closing.current) return;
+    closing.current = true;
+    Keyboard.dismiss();
+    exit.set(
+      withTiming(
+        1,
+        { duration: reducedMotion ? REDUCED_MS : EXIT_MS, easing: Easing.in(Easing.cubic) },
+        () => {
+          "worklet";
+          // Pop even if interrupted, so the sheet never gets stuck.
+          scheduleOnRN(goBack);
+        },
+      ),
+    );
+  }, [exit, reducedMotion, goBack]);
 
   // Real history only; empty for a new customer (section hidden).
   useEffect(() => {
@@ -118,6 +220,16 @@ export default function SearchScreen() {
     });
     return () => sub.remove();
   }, [expanded, collapseSearch]);
+
+  // Android back on the collapsed sheet plays the exit before closing.
+  useEffect(() => {
+    if (expanded) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      requestClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, [expanded, requestClose]);
 
   const remember = useCallback(
     (q: string) => {
@@ -210,21 +322,23 @@ export default function SearchScreen() {
   return (
     <View style={styles.root}>
       <StatusBar style="dark" />
+      {/* The BlurView stays static (never animated); only the plain tint
+          View over it fades. */}
       {Platform.OS === "ios" ? (
         <>
           <BlurView intensity={50} tint="light" style={StyleSheet.absoluteFill} />
-          <View style={[StyleSheet.absoluteFill, styles.iosTint]} />
+          <Animated.View style={[StyleSheet.absoluteFill, styles.iosTint, backdropStyle]} />
         </>
       ) : (
-        <View style={[StyleSheet.absoluteFill, styles.androidTint]} />
+        <Animated.View style={[StyleSheet.absoluteFill, styles.androidTint, backdropStyle]} />
       )}
       <KeyboardAvoidingView behavior="padding" style={styles.fill}>
         <View style={{ paddingTop: insets.top }} />
         {!expanded ? (
-          <View style={styles.topBar}>
+          <Animated.View style={[styles.topBar, topStyle]}>
             <ScopeTabs value={scope} onChange={onScope} />
             <Pressable
-              onPress={() => router.back()}
+              onPress={requestClose}
               accessibilityRole="button"
               accessibilityLabel="Close search"
               hitSlop={8}
@@ -232,7 +346,7 @@ export default function SearchScreen() {
             >
               <Icon name="close" size={16} color={colors.text} weight="semibold" />
             </Pressable>
-          </View>
+          </Animated.View>
         ) : null}
         <ScrollView
           style={styles.fill}
@@ -241,7 +355,9 @@ export default function SearchScreen() {
           keyboardDismissMode={expanded ? "none" : "on-drag"}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[searchStyles.card, styles.mainCard, expanded && styles.mainCardExpanded]}>
+          <Animated.View
+            style={[searchStyles.card, styles.mainCard, expanded && styles.mainCardExpanded, cardStyle]}
+          >
             {!expanded ? (
               <View style={styles.intro}>
                 <Text style={styles.title} accessibilityRole="header">
@@ -290,10 +406,12 @@ export default function SearchScreen() {
                 />
               </View>
             )}
-          </View>
+          </Animated.View>
         </ScrollView>
 
-        <View style={[styles.footer, { paddingBottom: keyboardOpen ? 12 : Math.max(insets.bottom, 12) }]}>
+        <Animated.View
+          style={[styles.footer, { paddingBottom: keyboardOpen ? 12 : Math.max(insets.bottom, 12) }, footerStyle]}
+        >
           <Pressable
             ref={filtersRef}
             onPress={openFilters}
@@ -313,7 +431,7 @@ export default function SearchScreen() {
             <Icon name="search" size={16} color={colors.white} weight="semibold" />
             <Text style={styles.showText}>{query.trim() ? "Search" : "Show all"}</Text>
           </Pressable>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </View>
   );
@@ -334,8 +452,8 @@ const styles = StyleSheet.create({
   },
   topBar: {
     paddingTop: 6,
-    // Extra gap so the card doesn't crowd the All/Food/Groceries tabs.
-    paddingBottom: 24,
+    // Clear breathing room between the All/Food/Groceries tabs and the card.
+    paddingBottom: 36,
     paddingHorizontal: 64,
     justifyContent: "center",
   },

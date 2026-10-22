@@ -100,12 +100,21 @@ export function HomeTopBar({
           </Text>
         </View>
         <Pressable
+          onPress={() => router.push("/notifications")}
+          accessibilityRole="button"
+          accessibilityLabel="Notifications"
+          hitSlop={4}
+          style={({ pressed }) => [styles.action, pressed && styles.pressed]}
+        >
+          <Icon name="bell" size={20} color={colors.primary} />
+        </Pressable>
+        <Pressable
           // TODO(support): open support chat.
           onPress={() => {}}
           accessibilityRole="button"
           accessibilityLabel="Support chat"
           hitSlop={4}
-          style={({ pressed }) => [styles.chat, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.action, pressed && styles.pressed]}
         >
           <Icon name="chat" size={20} color={colors.primary} />
         </Pressable>
@@ -129,11 +138,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
+    gap: 8,
   },
   info: {
     flex: 1,
-    marginLeft: 10,
-    marginRight: 12,
+    marginLeft: 2,
     alignItems: "flex-start",
   },
   location: {
@@ -154,7 +163,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textMuted,
   },
-  chat: {
+  action: {
     width: 44,
     height: 44,
     borderRadius: 22,

@@ -27,7 +27,9 @@ export const colors = {
   hairline: "#ECECEC",
   imagePlaceholder: "#EFEFEF",
   imagePlaceholderIcon: "#BDBDBD",
-  tabInactive: "#1C1C1E",
+  // Tab bar: active icon black, inactive icons grey.
+  tabActive: "#111111",
+  tabInactive: "#8E8E93",
   tabBarShadow: "#000000",
   // Light grey capsule behind the active tab.
   tabSelection: "rgba(17,17,17,0.08)",

@@ -1,8 +1,10 @@
 // TypeScript 6 no longer auto-includes @types/*, so pull in jest globals here.
 /// <reference types="jest" />
 import {
+  getTabBarWidth,
   getTabCellWidth,
   TAB_BAR_PADDING,
+  TAB_COUNT,
   TAB_PILL_INSET_X,
 } from "../tabBarMetrics";
 import {
@@ -18,18 +20,34 @@ const opts = (windowWidth: number) => ({
   insetX: TAB_PILL_INSET_X,
 });
 
+// Expected fallback frame, derived from the shared metrics (5 tabs).
+const expectedFrame = (windowWidth: number, index: number) => {
+  const cell = getTabCellWidth(windowWidth);
+  return {
+    x: TAB_BAR_PADDING + index * cell + TAB_PILL_INSET_X,
+    width: cell - TAB_PILL_INSET_X * 2,
+  };
+};
+
+const CELL_402 = getTabCellWidth(402);
+const cases = [402, 360].flatMap((w) =>
+  Array.from({ length: TAB_COUNT }, (_, i) => [w, i] as const),
+);
+
 describe("getIndicatorFrame", () => {
-  test.each([
-    [402, 0, 10, 79.5],
-    [402, 1, 97.5, 79.5],
-    [402, 2, 185, 79.5],
-    [402, 3, 272.5, 79.5],
-    [360, 0, 10, 69],
-    [360, 1, 87, 69],
-    [360, 2, 164, 69],
-    [360, 3, 241, 69],
-  ])("fallback at %ppt, index %p -> x %p, width %p", (w, index, x, width) => {
-    expect(getIndicatorFrame([], index, opts(w))).toEqual({ x, width });
+  test.each(cases)("fallback at %ppt, index %p", (w, index) => {
+    const frame = getIndicatorFrame([], index, opts(w));
+    const expected = expectedFrame(w, index);
+    expect(frame.x).toBeCloseTo(expected.x, 6);
+    expect(frame.width).toBeCloseTo(expected.width, 6);
+  });
+
+  test.each([402, 360])("the last pill ends one inset + padding from the bar edge at %ppt", (w) => {
+    const last = getIndicatorFrame([], TAB_COUNT - 1, opts(w));
+    expect(last.x + last.width + TAB_PILL_INSET_X + TAB_BAR_PADDING).toBeCloseTo(
+      getTabBarWidth(w),
+      6,
+    );
   });
 
   test("measured layouts override the fallback, uneven widths included", () => {
@@ -46,18 +64,15 @@ describe("getIndicatorFrame", () => {
   });
 
   test("missing layout for the index falls back", () => {
-    const layouts = [{ x: 0, width: 87.5 }, undefined];
-    expect(getIndicatorFrame(layouts, 1, opts(402))).toEqual({
-      x: 97.5,
-      width: 79.5,
-    });
+    const layouts = [{ x: 0, width: 70 }, undefined];
+    expect(getIndicatorFrame(layouts, 1, opts(402))).toEqual(expectedFrame(402, 1));
   });
 
   test("out-of-range index falls back without throwing", () => {
     expect(getIndicatorFrame([{ x: 0, width: 80 }], 7, opts(402)).width).toBe(
-      79.5,
+      CELL_402 - TAB_PILL_INSET_X * 2,
     );
-    expect(getIndicatorFrame([], -1, opts(402)).x).toBe(10);
+    expect(getIndicatorFrame([], -1, opts(402)).x).toBe(TAB_BAR_PADDING + TAB_PILL_INSET_X);
   });
 
   test("width is never negative", () => {

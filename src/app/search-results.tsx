@@ -215,7 +215,7 @@ export default function SearchResults() {
   );
 
   const renderItem = useCallback<ListRenderItem<DiscoveryItem>>(
-    ({ item }) => <FoodCard item={toFoodCardItem(item)} width={cardWidth} />,
+    ({ item }) => <FoodCard item={toFoodCardItem(item)} width={cardWidth} showFavourite />,
     [cardWidth],
   );
 

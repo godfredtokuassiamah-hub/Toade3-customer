@@ -63,26 +63,26 @@ const SEEDS: Seed[] = [
   { item_id: "lm-grilled-chicken-wedges", name: "Grilled Chicken & Wedges", vendor_id: "v-campus-grill", scope: "food", category_ids: ["local-dishes"], price_minor: 4500, eta_mins: 18 },
   { item_id: "lm-beef-veggie-rice", name: "Beef & Veggie Rice", vendor_id: "v-green-bowl", scope: "food", category_ids: ["rice-meals"], price_minor: 4000, eta_mins: 18 },
   { item_id: "lm-jollof-chicken", name: "Jollof Rice & Grilled Chicken", aliases: ["Jollof"], vendor_id: "v-mamas-pot", scope: "food", category_ids: ["rice-meals", "local-dishes"], price_minor: 3800, eta_mins: 20 },
-  { item_id: "lm-waakye", name: "Waakye Special", aliases: ["Waakye"], vendor_id: "v-auntie-ama", scope: "food", category_ids: ["local-dishes"], price_minor: 3000, eta_mins: 15 },
-  { item_id: "lm-banku-tilapia", name: "Banku & Grilled Tilapia", vendor_id: "v-lakeside", scope: "food", category_ids: ["local-dishes"], price_minor: 5500, eta_mins: 25 },
+  { item_id: "lm-waakye", name: "Yam Chips & Fried Chicken", aliases: ["Yam chips"], vendor_id: "v-auntie-ama", scope: "food", category_ids: ["local-dishes"], price_minor: 3000, eta_mins: 15 },
+  { item_id: "lm-banku-tilapia", name: "Banku & Okro Stew", aliases: ["Banku"], vendor_id: "v-lakeside", scope: "food", category_ids: ["local-dishes"], price_minor: 5500, eta_mins: 25 },
   { item_id: "lm-fried-rice-chicken", name: "Fried Rice & Chicken", vendor_id: "v-campus-grill", scope: "food", category_ids: ["rice-meals"], price_minor: 4200, eta_mins: 20 },
   // Home: Drinks
-  { item_id: "dr-matcha-bubble-tea", name: "Matcha Bubble Tea", aliases: ["Bubble tea", "Boba"], vendor_id: "v-green-bowl", scope: "food", category_ids: ["drinks"], price_minor: 2800, eta_mins: 12 },
-  { item_id: "dr-bliss-sparkling-juice", name: "Bliss Sparkling Juice", vendor_id: "v-campus-mart", scope: "groceries", category_ids: ["beverages"], price_minor: 800, eta_mins: 8 },
+  { item_id: "dr-matcha-bubble-tea", name: "Raspberry Iced Tea", aliases: ["Iced tea"], vendor_id: "v-green-bowl", scope: "food", category_ids: ["drinks"], price_minor: 2800, eta_mins: 12 },
+  { item_id: "dr-bliss-sparkling-juice", name: "Tropical Mango Soda", vendor_id: "v-campus-mart", scope: "groceries", category_ids: ["beverages"], price_minor: 800, eta_mins: 8 },
   { item_id: "dr-sobolo", name: "Sobolo (Hibiscus)", aliases: ["Sobolo"], vendor_id: "v-sweet-sip", scope: "food", category_ids: ["drinks"], price_minor: 1000, eta_mins: 10 },
-  { item_id: "dr-orange-juice", name: "Fresh Orange Juice", vendor_id: "v-juice-hub", scope: "food", category_ids: ["drinks"], price_minor: 1500, eta_mins: 10, stock: 0 },
-  { item_id: "dr-iced-coffee", name: "Iced Caramel Coffee", vendor_id: "v-brew-corner", scope: "food", category_ids: ["drinks"], price_minor: 2500, eta_mins: 12 },
-  { item_id: "dr-mango-smoothie", name: "Mango Smoothie", vendor_id: "v-sweet-sip", scope: "food", category_ids: ["drinks"], price_minor: 2200, eta_mins: 12 },
+  { item_id: "dr-orange-juice", name: "Classic Cola (Can)", vendor_id: "v-juice-hub", scope: "food", category_ids: ["drinks"], price_minor: 1500, eta_mins: 10, stock: 0 },
+  { item_id: "dr-iced-coffee", name: "Iced Lemon Tea", vendor_id: "v-brew-corner", scope: "food", category_ids: ["drinks"], price_minor: 2500, eta_mins: 12 },
+  { item_id: "dr-mango-smoothie", name: "Strawberry Coconut Smoothie", vendor_id: "v-sweet-sip", scope: "food", category_ids: ["drinks"], price_minor: 2200, eta_mins: 12 },
   // Home: Bakery & Desserts
-  { item_id: "bk-sliced-bread", name: "Sliced White Bread", vendor_id: "v-golden-crust", scope: "groceries", category_ids: ["bread-bakery"], price_minor: 2000, eta_mins: 15 },
-  { item_id: "bk-chocolate-cake", name: "Chocolate Fudge Cake", vendor_id: "v-sweet-tooth", scope: "food", category_ids: ["snacks"], price_minor: 3500, eta_mins: 20 },
-  { item_id: "bk-meat-pie", name: "Meat Pie", vendor_id: "v-golden-crust", scope: "food", category_ids: ["snacks"], price_minor: 1200, eta_mins: 15, stock: 0 },
-  { item_id: "bk-croissant", name: "Butter Croissant", vendor_id: "v-le-petit", scope: "food", category_ids: ["snacks"], price_minor: 1800, eta_mins: 15 },
-  { item_id: "bk-doughnuts", name: "Glazed Doughnuts (2 pcs)", vendor_id: "v-sweet-tooth", scope: "food", category_ids: ["snacks"], price_minor: 1600, eta_mins: 15 },
+  { item_id: "bk-sliced-bread", name: "Deli Sandwich Trio", vendor_id: "v-golden-crust", scope: "groceries", category_ids: ["bread-bakery"], price_minor: 2000, eta_mins: 15 },
+  { item_id: "bk-chocolate-cake", name: "Strawberry Cream Roll Cake", vendor_id: "v-sweet-tooth", scope: "food", category_ids: ["snacks"], price_minor: 3500, eta_mins: 20 },
+  { item_id: "bk-meat-pie", name: "Toasted Ham & Cheese Sub", vendor_id: "v-golden-crust", scope: "food", category_ids: ["snacks"], price_minor: 1200, eta_mins: 15, stock: 0 },
+  { item_id: "bk-croissant", name: "Vanilla Cream Roll", vendor_id: "v-le-petit", scope: "food", category_ids: ["snacks"], price_minor: 1800, eta_mins: 15 },
+  { item_id: "bk-doughnuts", name: "Strawberry Roll Slices (6 pcs)", vendor_id: "v-sweet-tooth", scope: "food", category_ids: ["snacks"], price_minor: 1600, eta_mins: 15 },
   // Extra food
   { item_id: "cg-chicken-jollof", name: "Chicken Jollof", vendor_id: "v-campus-grill", scope: "food", category_ids: ["rice-meals", "local-dishes"], price_minor: 4000, eta_mins: 20 },
   { item_id: "fd-kelewele", name: "Spicy Kelewele", vendor_id: "v-auntie-ama", scope: "food", category_ids: ["snacks", "local-dishes"], price_minor: 1500, eta_mins: 15 },
-  { item_id: "fd-red-red", name: "Red Red & Plantain", vendor_id: "v-mamas-pot", scope: "food", category_ids: ["local-dishes"], price_minor: 3200, eta_mins: 20 },
+  { item_id: "fd-red-red", name: "Carrot & Cucumber Salad", vendor_id: "v-mamas-pot", scope: "food", category_ids: ["local-dishes"], price_minor: 3200, eta_mins: 20 },
   { item_id: "fd-fufu-light-soup", name: "Fufu & Light Soup", vendor_id: "v-lakeside", scope: "food", category_ids: ["local-dishes"], price_minor: 6000, eta_mins: 30 },
   { item_id: "fd-chicken-shawarma", name: "Chicken Shawarma", vendor_id: "v-campus-grill", scope: "food", category_ids: ["snacks"], price_minor: 3500, eta_mins: 15 },
   { item_id: "dr-mint-tea", name: "Fresh Mint Tea", vendor_id: "v-brew-corner", scope: "food", category_ids: ["drinks"], price_minor: 1400, eta_mins: 10 },
@@ -102,15 +102,20 @@ const SEEDS: Seed[] = [
   { item_id: "gr-dish-soap", name: "Dishwashing Liquid", vendor_id: "v-campus-mart", scope: "groceries", category_ids: ["household"], price_minor: 1400, eta_mins: 15 },
   { item_id: "gr-toilet-roll", name: "Toilet Roll (10 pack)", vendor_id: "v-campus-mart", scope: "groceries", category_ids: ["household"], price_minor: 5000, eta_mins: 15 },
   // Extra store categories for the Home category grid (placeholder items).
-  { item_id: "gf-gift-hamper", name: "Gift Hamper", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["gifts"], price_minor: 15000, eta_mins: 30, weight_g: 2000 },
-  { item_id: "gf-greeting-card", name: "Greeting Card", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["gifts"], price_minor: 1500, eta_mins: 30, weight_g: 50 },
-  { item_id: "gf-scented-candle", name: "Scented Candle", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["gifts"], price_minor: 4500, eta_mins: 30, weight_g: 300 },
+  { item_id: "gf-gift-hamper", name: "Chocolate Treats Box", aliases: ["Gift hamper", "Chocolate box"], vendor_id: "v-city-stores", scope: "groceries", category_ids: ["gifts"], price_minor: 25000, eta_mins: 30, weight_g: 2000 },
+  { item_id: "gf-greeting-card", name: "Stitch Pamper Gift Box", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["gifts"], price_minor: 32000, eta_mins: 30, weight_g: 1500 },
+  { item_id: "gf-scented-candle", name: "Stitch Plush Gift Set", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["gifts"], price_minor: 38000, eta_mins: 30, weight_g: 1800 },
+  { item_id: "gf-cute-blue-box", name: "Cute Blue Surprise Box", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["gifts"], price_minor: 29000, eta_mins: 30, weight_g: 1500 },
+  { item_id: "gf-executive-set", name: "Executive Blue Gift Set", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["gifts"], price_minor: 45000, eta_mins: 30, weight_g: 1600 },
+  { item_id: "gf-stationery-crate", name: "Stationery Gift Crate", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["gifts"], price_minor: 18000, eta_mins: 30, weight_g: 1200 },
   { item_id: "hd-led-desk-lamp", name: "LED Desk Lamp", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["home-diy"], price_minor: 9500, eta_mins: 35, weight_g: 800 },
   { item_id: "hd-screwdriver-set", name: "Screwdriver Set", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["home-diy"], price_minor: 6000, eta_mins: 35, weight_g: 600 },
   { item_id: "hd-wall-hooks", name: "Adhesive Wall Hooks (6 pack)", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["home-diy"], price_minor: 2200, eta_mins: 35, weight_g: 150 },
-  { item_id: "sp-yoga-mat", name: "Yoga Mat", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["sports"], price_minor: 8000, eta_mins: 35, weight_g: 1200 },
-  { item_id: "sp-dumbbell-set", name: "Dumbbell Set (2x2kg)", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["sports"], price_minor: 18000, eta_mins: 40, weight_g: 4000 },
-  { item_id: "sp-skipping-rope", name: "Skipping Rope", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["sports"], price_minor: 3000, eta_mins: 35, weight_g: 200 },
+  { item_id: "sp-yoga-mat", name: "Stair Climber Machine", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["sports"], price_minor: 950000, eta_mins: 60, weight_g: 7500 },
+  { item_id: "sp-dumbbell-set", name: "Vinyl Kettlebell Set (4-12kg)", aliases: ["Kettlebell"], vendor_id: "v-city-stores", scope: "groceries", category_ids: ["sports"], price_minor: 45000, eta_mins: 40, weight_g: 4000 },
+  { item_id: "sp-skipping-rope", name: "Basketball Backpack", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["sports"], price_minor: 32000, eta_mins: 35, weight_g: 900 },
+  { item_id: "sp-bottle-pouch", name: "Water Bottle Phone Pouch", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["sports"], price_minor: 9500, eta_mins: 35, weight_g: 200 },
+  { item_id: "sp-pocket-gimbal", name: "Pocket Gimbal Camera", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["sports"], price_minor: 650000, eta_mins: 40, weight_g: 300 },
   { item_id: "ph-paracetamol", name: "Paracetamol (16 tablets)", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["pharmacy"], price_minor: 1000, eta_mins: 25, weight_g: 40 },
   { item_id: "ph-hand-sanitiser", name: "Hand Sanitiser 250ml", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["pharmacy"], price_minor: 1800, eta_mins: 25, weight_g: 280 },
   { item_id: "ph-plasters", name: "Adhesive Plasters (20 pack)", vendor_id: "v-city-stores", scope: "groceries", category_ids: ["pharmacy"], price_minor: 1200, eta_mins: 25, weight_g: 60 },
@@ -148,6 +153,28 @@ export function getItemsByIds(ids: readonly string[]): MockItem[] {
     if (item) out.push(item);
   }
   return out;
+}
+
+// Vendor lookup for the storefront screen. undefined for an unknown id.
+const VENDORS_BY_ID = new Map(VENDORS.map((v) => [v.vendor_id, v]));
+
+export function getVendorById(vendorId: string): MockVendor | undefined {
+  return VENDORS_BY_ID.get(vendorId);
+}
+
+// A vendor's menu for the storefront: published, non-disabled items in
+// catalog (ITEMS) order. Sold-out (stock: 0) items stay INCLUDED — the
+// screen keeps them visible and marked, matching the cards elsewhere.
+export function getItemsByVendor(vendorId: string): MockItem[] {
+  return ITEMS.filter((i) => i.vendor_id === vendorId && i.published && !i.disabled);
+}
+
+// Owning vendor id for a catalog item id. Used by home.ts to backfill the
+// static Home items' vendorId so a tap opens the right storefront.
+const VENDOR_ID_BY_ITEM = new Map(ITEMS.map((i) => [i.item_id, i.vendor_id]));
+
+export function getVendorIdForItem(itemId: string): string | undefined {
+  return VENDOR_ID_BY_ITEM.get(itemId);
 }
 
 // Popular typed searches offered as query suggestions.

@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { router } from "expo-router";
 import { memo } from "react";
 import { type ImageSourcePropType, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
@@ -12,6 +13,7 @@ import { formatMinorFixed } from "../../lib/discovery/money";
 import type { ItemStatus } from "../../lib/discovery/types";
 import { formatEta, formatGhs } from "../../lib/format";
 import { colors, fontFamily } from "../../theme";
+import { FavouriteButton } from "../ui/FavouriteButton";
 import { Icon } from "../ui/Icon";
 
 const PADDING = 8;
@@ -21,6 +23,8 @@ export type FoodCardItem = {
   id: string;
   name: string;
   vendor: string;
+  // Owning vendor id; tapping the card opens this vendor's storefront.
+  vendorId: string;
   etaMins: number;
   image?: ImageSourcePropType;
   priceGhs?: number;
@@ -32,6 +36,9 @@ export type FoodCardItem = {
 type Props = {
   item: FoodCardItem;
   width: number;
+  // Opt-in heart badge on the image's top-right (FavouriteButton). It is a
+  // sibling of the card's Pressable, so tapping it never opens the card.
+  showFavourite?: boolean;
 };
 
 const STATUS_LABEL: Record<Exclude<ItemStatus, "available">, string> = {
@@ -39,7 +46,7 @@ const STATUS_LABEL: Record<Exclude<ItemStatus, "available">, string> = {
   sold_out: "Sold out",
 };
 
-function FoodCardBase({ item, width }: Props) {
+function FoodCardBase({ item, width, showFavourite = false }: Props) {
   const reducedMotion = useReducedMotion();
   const scale = useSharedValue(1);
   const pressStyle = useAnimatedStyle(() => ({
@@ -54,10 +61,16 @@ function FoodCardBase({ item, width }: Props) {
   // not orderable. TODO(cart): disable Add once cards get an Add button.
   const statusLabel = item.status && item.status !== "available" ? STATUS_LABEL[item.status] : null;
 
-  return (
+  const card = (
     <Pressable
-      // TODO(item): open item detail.
-      onPress={() => {}}
+      // Every item surface (Home rows, filtered Home, search results,
+      // favourites) opens the owning vendor's storefront.
+      // TODO(item): a dedicated item-detail screen could deep-link to this
+      // item within the storefront later.
+      onPress={() =>
+        router.push({ pathname: "/storefront/[vendorId]", params: { vendorId: item.vendorId } })
+      }
+      style={showFavourite ? styles.grow : undefined}
       onPressIn={() => {
         if (!reducedMotion) scale.set(withTiming(0.97, { duration: 120 }));
       }}
@@ -65,7 +78,7 @@ function FoodCardBase({ item, width }: Props) {
         if (!reducedMotion) scale.set(withTiming(1, { duration: 120 }));
       }}
       accessibilityRole="button"
-      accessibilityLabel={`${item.name}, ${item.vendor}, ${price}, ${eta}${statusLabel ? `, ${statusLabel}` : ""}`}
+      accessibilityLabel={`${item.name}, from ${item.vendor}, ${price}, ${eta}${statusLabel ? `, ${statusLabel}` : ""}, opens ${item.vendor}`}
     >
       <Animated.View style={[styles.card, { width }, pressStyle]}>
         <View style={[styles.imageBox, { width: imageWidth }, statusLabel != null && styles.dimmed]}>
@@ -109,6 +122,14 @@ function FoodCardBase({ item, width }: Props) {
       </Animated.View>
     </Pressable>
   );
+
+  if (!showFavourite) return card;
+  return (
+    <View style={styles.grow}>
+      {card}
+      <FavouriteButton itemId={item.id} variant="badge" style={styles.heart} />
+    </View>
+  );
 }
 
 export const FoodCard = memo(FoodCardBase);
@@ -139,6 +160,14 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 8,
     backgroundColor: colors.text,
+  },
+  grow: {
+    flexGrow: 1,
+  },
+  heart: {
+    position: "absolute",
+    top: PADDING + 6,
+    right: PADDING + 6,
   },
   badgeText: {
     fontFamily: fontFamily.semibold,

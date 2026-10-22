@@ -21,7 +21,6 @@ type IconSpec = {
 // SF Symbols on iOS only (Apple licence); Material Symbols on Android/web.
 const ICONS = {
   home: { sf: "house", sfFilled: "house.fill", material: "home" },
-  explore: { sf: "safari", sfFilled: "safari.fill", material: "explore" },
   orders: {
     sf: "takeoutbag.and.cup.and.straw",
     sfFilled: "takeoutbag.and.cup.and.straw.fill",
@@ -33,6 +32,13 @@ const ICONS = {
     sfFilled: "ellipsis.message.fill",
     material: "sms",
   },
+  bell: {
+    sf: "bell",
+    sfFilled: "bell.fill",
+    material: "notifications",
+  },
+  reorder: { sf: "arrow.counterclockwise", material: "restart_alt" },
+  trash: { sf: "trash", sfFilled: "trash.fill", material: "delete" },
   search: { sf: "magnifyingglass", material: "search" },
   filter: { sf: "slider.horizontal.3", material: "tune" },
   chevronRight: { sf: "chevron.right", material: "chevron_right" },
@@ -50,7 +56,11 @@ const ICONS = {
   recenter: { sf: "scope", material: "my_location" },
   // Search sheet: clear field, stores and category tiles.
   clearField: { sf: "xmark.circle.fill", material: "cancel" },
-  store: { sf: "storefront", material: "storefront" },
+  store: { sf: "storefront", sfFilled: "storefront.fill", material: "storefront" },
+  // Map tab.
+  map: { sf: "map", sfFilled: "map.fill", material: "map" },
+  // Store cards: delivery fee.
+  delivery: { sf: "bicycle", material: "pedal_bike" },
   localDishes: { sf: "fork.knife", material: "restaurant" },
   riceMeals: { sf: "takeoutbag.and.cup.and.straw", material: "rice_bowl" },
   snacks: { sf: "birthday.cake", material: "cookie" },
