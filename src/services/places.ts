@@ -10,6 +10,8 @@ import { Platform } from "react-native";
 
 import { mapPhotonResponse } from "../lib/places/mapPhoton";
 import type { LatLng, PlaceSuggestion } from "../lib/places/types";
+import { parseRetryAfter, retryWithBackoff } from "../lib/security/backoff";
+import { placesBucket } from "../lib/security/clientLimits";
 
 // Direct process.env access so Expo inlines it at build time.
 export const PLACES_BASE_URL = (
@@ -26,13 +28,33 @@ const LANG = "en";
 const ZOOM = 12;
 const TIMEOUT_MS = 8000;
 const CACHE_MAX = 30;
+// GETs are idempotent: retry 429 / 503 (Photon throttling or a brief outage)
+// up to 3 attempts with jittered backoff, honouring Retry-After (max 10 s).
+// 500, network failures and bad JSON are not retried.
+const MAX_ATTEMPTS = 3;
+const RETRY_AFTER_MAX_MS = 10_000;
+const RETRY_STATUSES = new Set([429, 503]);
 
 export class PlacesError extends Error {
+  // HTTP status for non-OK responses.
+  status?: number;
+  // Retry-After hint in ms, when the server sent one.
+  retryAfterMs?: number | null;
+
   constructor(message = "Place lookup failed", cause?: unknown) {
     super(message);
     this.name = "PlacesError";
     if (cause !== undefined) (this as { cause?: unknown }).cause = cause;
   }
+}
+
+function httpError(res: Response): PlacesError {
+  const e = new PlacesError(`HTTP ${res.status}`);
+  e.status = res.status;
+  // Test doubles may omit headers.
+  const h = (res as { headers?: { get?: (name: string) => string | null } }).headers;
+  e.retryAfterMs = parseRetryAfter(h?.get?.("Retry-After"), Date.now(), RETRY_AFTER_MAX_MS);
+  return e;
 }
 
 function abortError(): Error {
@@ -52,9 +74,22 @@ function headers(): Record<string, string> {
   return h;
 }
 
-// GET JSON with an 8 s timeout. A caller abort rethrows AbortError (so
-// latest-wins callers can ignore it); everything else is a PlacesError.
+// GET JSON with an 8 s timeout per attempt. A caller abort rethrows
+// AbortError (so latest-wins callers can ignore it); everything else is a
+// PlacesError. A client-side token bucket (UX / fair-use only) caps bursts
+// before any request is sent.
 async function getJson(url: string, signal?: AbortSignal): Promise<unknown> {
+  if (signal?.aborted) throw abortError();
+  if (!placesBucket.tryTake()) throw new PlacesError("Rate limited");
+  return retryWithBackoff(() => getJsonOnce(url, signal), {
+    maxAttempts: MAX_ATTEMPTS,
+    shouldRetry: (e) => e instanceof PlacesError && e.status !== undefined && RETRY_STATUSES.has(e.status),
+    retryAfterMs: (e) => (e instanceof PlacesError ? (e.retryAfterMs ?? null) : null),
+    signal,
+  });
+}
+
+async function getJsonOnce(url: string, signal?: AbortSignal): Promise<unknown> {
   if (signal?.aborted) throw abortError();
   const controller = new AbortController();
   let timedOut = false;
@@ -72,7 +107,7 @@ async function getJson(url: string, signal?: AbortSignal): Promise<unknown> {
       if (signal?.aborted) throw abortError();
       throw new PlacesError(timedOut ? "Timed out" : "Network error", e);
     }
-    if (!res.ok) throw new PlacesError(`HTTP ${res.status}`);
+    if (!res.ok) throw httpError(res);
     try {
       return await res.json();
     } catch (e) {

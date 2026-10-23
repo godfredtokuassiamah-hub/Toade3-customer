@@ -57,6 +57,15 @@ type Props = {
   accessibilityLabel?: string;
   // Called once the enter animation has finished (e.g. to move a11y focus).
   onOpened?: () => void;
+  // Called once the exit animation has finished and the Modal is unmounted.
+  onClosed?: () => void;
+  // "frost" (default): white glass backdrop. "dim": 40% black overlay, no
+  // blur, and the drag spring-back never overshoots.
+  backdrop?: "frost" | "dim";
+  // Gap above the sheet as a fraction of the window height (default 0.1).
+  topGapRatio?: number;
+  // Size the sheet to its content, anchored to the bottom (compact sheets).
+  fitContent?: boolean;
 };
 
 const RADIUS = 22;
@@ -71,6 +80,8 @@ const OVERLAY = Platform.select({
   default: "rgba(255,255,255,0.75)",
 });
 
+const DIM_OVERLAY = "rgba(0,0,0,0.4)";
+
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
 export function BottomSheet({
@@ -80,6 +91,10 @@ export function BottomSheet({
   header,
   accessibilityLabel,
   onOpened,
+  onClosed,
+  backdrop: backdropKind = "frost",
+  topGapRatio = 0.1,
+  fitContent = false,
 }: Props) {
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -99,6 +114,16 @@ export function BottomSheet({
     onOpenedRef.current = onOpened;
   });
   const notifyOpened = useCallback(() => onOpenedRef.current?.(), []);
+  const onClosedRef = useRef(onClosed);
+  useEffect(() => {
+    onClosedRef.current = onClosed;
+  });
+  const finishClose = useCallback(() => {
+    setMounted(false);
+    onClosedRef.current?.();
+  }, []);
+  // Primitive copy for the pan worklet.
+  const clampSpring = backdropKind === "dim";
 
   useEffect(() => {
     if (visible) {
@@ -119,11 +144,11 @@ export function BottomSheet({
         { duration: EXIT_MS, easing: Easing.in(Easing.cubic) },
         (finished) => {
           "worklet";
-          if (finished) scheduleOnRN(setMounted, false);
+          if (finished) scheduleOnRN(finishClose);
         },
       );
     }
-  }, [visible, progress, backdrop, drag, notifyOpened]);
+  }, [visible, progress, backdrop, drag, notifyOpened, finishClose]);
 
   const pan = useMemo(
     () =>
@@ -139,10 +164,12 @@ export function BottomSheet({
             // Exit animation continues from the current drag position.
             scheduleOnRN(onClose);
           } else {
-            drag.set(withSpring(0, { damping: 20, stiffness: 220 }));
+            drag.set(
+              withSpring(0, { damping: 20, stiffness: 220, overshootClamping: clampSpring }),
+            );
           }
         }),
-    [drag, onClose],
+    [drag, onClose, clampSpring],
   );
 
   const sheetStyle = useAnimatedStyle(() =>
@@ -156,7 +183,7 @@ export function BottomSheet({
         },
   );
 
-  const marginTop = Math.max(Math.round(height * 0.1), insets.top + 8);
+  const marginTop = Math.max(Math.round(height * topGapRatio), insets.top + 8);
 
   return (
     <Modal
@@ -168,14 +195,14 @@ export function BottomSheet({
       onRequestClose={onClose}
     >
       <GestureHandlerRootView style={styles.fill}>
-        <Backdrop progress={backdrop} onPress={onClose} />
+        <Backdrop progress={backdrop} onPress={onClose} dim={backdropKind === "dim"} />
         <KeyboardAvoidingView
           behavior="padding"
-          style={styles.fill}
+          style={[styles.fill, fitContent && styles.fitContainer]}
           pointerEvents="box-none"
         >
           <Animated.View
-            style={[styles.sheet, { marginTop }, sheetStyle]}
+            style={[styles.sheet, fitContent && styles.sheetFit, { marginTop }, sheetStyle]}
             accessibilityViewIsModal
             accessibilityLabel={accessibilityLabel}
             onAccessibilityEscape={onClose}
@@ -197,9 +224,11 @@ export function BottomSheet({
 function Backdrop({
   progress,
   onPress,
+  dim,
 }: {
   progress: SharedValue<number>;
   onPress: () => void;
+  dim: boolean;
 }) {
   const overlayStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
   const blurProps = useAnimatedProps(() => ({
@@ -214,7 +243,7 @@ function Backdrop({
       accessible={false}
       importantForAccessibility="no-hide-descendants"
     >
-      {Platform.OS === "ios" ? (
+      {Platform.OS === "ios" && !dim ? (
         <AnimatedBlurView
           tint="light"
           animatedProps={blurProps}
@@ -222,7 +251,7 @@ function Backdrop({
         />
       ) : null}
       <Animated.View
-        style={[StyleSheet.absoluteFill, { backgroundColor: OVERLAY }, overlayStyle]}
+        style={[StyleSheet.absoluteFill, { backgroundColor: dim ? DIM_OVERLAY : OVERLAY }, overlayStyle]}
       />
     </Pressable>
   );
@@ -238,6 +267,12 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: RADIUS,
     borderTopRightRadius: RADIUS,
     overflow: "hidden",
+  },
+  fitContainer: {
+    justifyContent: "flex-end",
+  },
+  sheetFit: {
+    flex: 0,
   },
   handle: {
     alignSelf: "center",

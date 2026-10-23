@@ -48,6 +48,15 @@ export function formatMinorFixed(minor: number): string {
   return `GHS ${grouped(whole)}.${fraction}`;
 }
 
+// 1089 -> "GH₵10.89", 123456 -> "GH₵1,234.56" (storefront mockup style:
+// cedi sign, always 2 decimals). Uses grouped() rather than toLocaleString so
+// output is identical on Hermes/Android/iOS regardless of device locale.
+export function formatCedi(minor: number): string {
+  const whole = Math.floor(minor / 100);
+  const fraction = (minor % 100).toString().padStart(2, "0");
+  return `GH₵${grouped(whole)}.${fraction}`;
+}
+
 // Max bucket edge for "No limit": "GHS 150+".
 export function formatOpenMax(minor: number): string {
   return `${formatMinor(minor)}+`;

@@ -1,5 +1,6 @@
 // Horizontal, snapping row of store cards: ~72% wide so the next card
 // peeks. Plain FlatList + snapToInterval (no scroll worklets, no onScroll).
+import { router } from "expo-router";
 import { memo, useCallback } from "react";
 import {
   Alert,
@@ -10,6 +11,7 @@ import {
   View,
 } from "react-native";
 
+import { storeVendorId } from "../../lib/storefront/storefrontLink";
 import type { QuotedStore } from "../../lib/stores/storeSections";
 import { StoreCard } from "./StoreCard";
 
@@ -20,8 +22,15 @@ export function getStoreCardWidth(windowWidth: number): number {
   return Math.round(windowWidth * 0.72);
 }
 
-// TODO(store): open the storefront once it exists.
+// Opens the linked catalog vendor's storefront; stores without one keep the
+// placeholder Alert. (Mock link: the storefront shows the vendor's name and
+// hours, not the store card's.)
 export function openStorefront(item: QuotedStore): void {
+  const vendorId = storeVendorId(item.store);
+  if (vendorId) {
+    router.push({ pathname: "/storefront/[vendorId]", params: { vendorId } });
+    return;
+  }
   Alert.alert("Storefront coming soon", `${item.store.name} will open here soon.`);
 }
 

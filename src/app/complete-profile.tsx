@@ -32,7 +32,9 @@ import {
   DEFAULT_COUNTRY,
   getCountryByIso2,
 } from "../data/countries";
+import { RATE_LIMIT_MESSAGE } from "../lib/auth/authErrors";
 import { errorHaptic, successHaptic } from "../lib/haptics";
+import { isRateLimitedError } from "../lib/security/rateLimitError";
 import { isValidFullName, normalizeFullName } from "../lib/validation/name";
 import { normalizePhone } from "../lib/validation/phone";
 import { completeProfile } from "../services/profile";
@@ -173,11 +175,12 @@ export default function CompleteProfile() {
       successHaptic();
       if (router.canDismiss()) router.dismissAll();
       router.replace("/complete-address");
-    } catch {
+    } catch (e) {
       if (!mounted.current) return;
-      setSaveError(SAVE_ERROR);
+      const message = isRateLimitedError(e) ? RATE_LIMIT_MESSAGE : SAVE_ERROR;
+      setSaveError(message);
       errorHaptic();
-      AccessibilityInfo.announceForAccessibility(SAVE_ERROR);
+      AccessibilityInfo.announceForAccessibility(message);
     } finally {
       savingRef.current = false;
       if (mounted.current) setSaving(false);

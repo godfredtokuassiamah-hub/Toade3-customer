@@ -47,4 +47,6 @@ export const foodImages: Record<string, ImageSourcePropType | undefined> = {
   "sp-skipping-rope": pin("1200x/fa/cc/5c/facc5c00aaaf70a6eead1ee6ae5ecd79.jpg"),
   "sp-bottle-pouch": pin("1200x/53/71/68/537168bd58354d73acc745243f7f464f.jpg"),
   "sp-pocket-gimbal": pin("736x/21/90/ef/2190ef3d411379e4c370cfea01fb3e97.jpg"),
+  // Store storefronts (reused photos)
+  "mf-assorted-fried-rice": pin("736x/02/e7/51/02e75135036abb41a7ad13bfcf9bf3f8.jpg"),
 };

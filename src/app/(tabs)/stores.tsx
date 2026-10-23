@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useCartBarInset } from "../../components/cart/useCartBarInset";
 import { PromoBanner } from "../../components/home/PromoBanner";
 import { SearchRow } from "../../components/home/SearchRow";
 import { SectionHeader } from "../../components/home/SectionHeader";
@@ -27,7 +28,8 @@ import { openStorefront, StoreRow } from "../../components/stores/StoreRow";
 import { useDropoff } from "../../components/stores/useDropoff";
 import { Icon } from "../../components/ui/Icon";
 import { homeData } from "../../data/mock/home";
-import { STORE_CATEGORY_LABELS, STORES, type StoreCategory } from "../../data/mock/stores";
+import { STORE_CATEGORY_LABELS, type StoreCategory } from "../../data/mock/stores";
+import { useStores } from "../../hooks/useStores";
 import {
   buildStoreSections,
   type QuotedStore,
@@ -62,9 +64,11 @@ export default function Stores() {
     [],
   );
 
+  // Store directory via the query cache (mock placeholder until loaded).
+  const { stores } = useStores();
   const sections = useMemo(
-    () => buildStoreSections(STORES, dropoff, category),
-    [dropoff, category],
+    () => buildStoreSections(stores, dropoff, category),
+    [stores, dropoff, category],
   );
 
   // With a category selected, show ONLY that category's stores in one list
@@ -73,9 +77,9 @@ export default function Stores() {
   const categoryStores = useMemo(
     () =>
       category
-        ? quoteStores(STORES, dropoff).filter((s) => s.store.category === category)
+        ? quoteStores(stores, dropoff).filter((s) => s.store.category === category)
         : [],
-    [dropoff, category],
+    [stores, dropoff, category],
   );
 
   const data = useMemo<Row[]>(() => {
@@ -168,9 +172,13 @@ export default function Stores() {
     [category, toggleCategory, openSection, width],
   );
 
+  const cartInset = useCartBarInset();
   const contentStyle = useMemo(
-    () => ({ paddingTop: 4, paddingBottom: getTabBarClearance(insets.bottom, fontScale) }),
-    [insets.bottom, fontScale],
+    () => ({
+      paddingTop: 4,
+      paddingBottom: getTabBarClearance(insets.bottom, fontScale) + cartInset,
+    }),
+    [insets.bottom, fontScale, cartInset],
   );
 
   return (

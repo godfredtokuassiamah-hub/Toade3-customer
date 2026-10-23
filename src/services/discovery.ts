@@ -1,14 +1,23 @@
 // The ONE discovery contract: P12 previews, P11 suggestions, results pages
 // and the filtered Home all call these two functions.
 //
-// TODO(discovery): replace the mock oracle with the Edge endpoints
+// The ranking / facet oracle (src/lib/discovery/oracle.ts) still runs on the
+// client: full facet parity in SQL is a later step. What changed is its
+// SOURCE: the catalog snapshot comes from Supabase (vendors, products,
+// product_categories; src/services/catalog.ts fetchDiscoveryCatalog) through
+// the shared query cache (5 min stale, persisted), falling back to the
+// bundled mock catalog per BACKEND_MODE (src/lib/backend/config.ts).
+//
+// TODO(discovery): move the query itself to the Edge endpoints
 //   POST /v1/customer/discovery/query        -> discoveryQuery
 //   POST /v1/customer/discovery/suggestions  -> discoverySuggestions
 // (same request/response shapes, see docs/discovery-api.md). Coverage is
 // then resolved server-side from the confirmed drop-off, and HTTP 401/403/
 // 409/422/429 map onto DiscoveryError. Availability and price are
 // rechecked at quote/order time; discovery is display-only.
-import { CATEGORIES, mockDiscoveryCatalog } from "../data/mock/catalog";
+import { CATEGORIES } from "../data/mock/catalog";
+import { MINUTE, queryClient } from "../lib/backend/queryClient";
+import { qk } from "../lib/backend/queryKeys";
 import {
   isWithinMockCoverage,
   MOCK_COVERAGE,
@@ -25,11 +34,30 @@ import {
   type DiscoverySuggestionsResponse,
   type MockCatalog,
 } from "../lib/discovery/types";
+import { type DiscoverySnapshot, fetchDiscoveryCatalog, withItemImages } from "./catalog";
 
 const LATENCY_MS = 300;
 
-let catalog: MockCatalog = mockDiscoveryCatalog;
+// DEV revision bumps on top of the snapshot's own revision.
+let revisionBump = 0;
 const contexts = new Map<string, { revision: number; coords: Coordinates | null }>();
+// Images attached once per snapshot object.
+const imaged = new WeakMap<DiscoverySnapshot, MockCatalog>();
+
+async function activeCatalog(): Promise<MockCatalog> {
+  const snapshot = await queryClient.fetchQuery({
+    queryKey: qk.discoveryCatalog(),
+    queryFn: fetchDiscoveryCatalog,
+    staleTime: 5 * MINUTE,
+    retry: false,
+  });
+  let catalog = imaged.get(snapshot);
+  if (!catalog) {
+    catalog = withItemImages(snapshot);
+    imaged.set(snapshot, catalog);
+  }
+  return revisionBump === 0 ? catalog : { ...catalog, revision: catalog.revision + revisionBump };
+}
 
 // Local category taxonomy (labels / scopes) for chips and revalidation.
 export function getCategoryTaxonomy(): Category[] {
@@ -52,7 +80,7 @@ export function registerDeliveryContext(
 // DEV: simulate a catalog change (stock/price update) so open cursors go
 // stale and the client shows "Results refreshed as availability changed."
 export function bumpMockCatalogRevision(): void {
-  catalog = { ...catalog, revision: catalog.revision + 1 };
+  revisionBump += 1;
 }
 
 export function isAbortError(e: unknown): boolean {
@@ -106,6 +134,8 @@ export async function discoveryQuery(
 ): Promise<DiscoveryQueryResponse> {
   await delay(signal);
   try {
+    const catalog = await activeCatalog();
+    if (signal?.aborted) throw abortError();
     const { covered } = resolveContext(req.context_id, req.context_revision);
     return runDiscoveryQuery(catalog, req, { now: new Date(), covered });
   } catch (e) {
@@ -119,6 +149,8 @@ export async function discoverySuggestions(
 ): Promise<DiscoverySuggestionsResponse> {
   await delay(signal);
   try {
+    const catalog = await activeCatalog();
+    if (signal?.aborted) throw abortError();
     const { covered } = resolveContext(req.context_id, req.context_revision);
     return runDiscoverySuggestions(catalog, req, { now: new Date(), covered });
   } catch (e) {

@@ -1,0 +1,22 @@
+{
+  "_comment": "Shared fare matrix. The TS calculator (src/lib/stores/deliveryQuote.ts) and the SQL block between FARE_MATRIX_BEGIN/END in supabase/migrations/0007_order_functions.sql must both match this file (fareMatrix-test.ts).",
+  "zones": [
+    { "id": 1, "maxTenths": 10, "feeMinor": 500, "etaMins": [10, 15] },
+    { "id": 2, "maxTenths": 25, "feeMinor": 800, "etaMins": [15, 25] },
+    { "id": 3, "maxTenths": 40, "feeMinor": 1200, "etaMins": [25, 35] },
+    { "id": 4, "maxTenths": 50, "feeMinor": 1200, "perTenthOver40Minor": 25, "etaMins": [35, 45] }
+  ],
+  "maxTenths": 50,
+  "maxPayloadG": 8000,
+  "serviceFeeMinor": 300,
+  "cases": [
+    { "km": 1.0, "priceKm": 1.0, "feeMinor": 500 },
+    { "km": 1.04, "priceKm": 1.1, "feeMinor": 800 },
+    { "km": 2.5, "priceKm": 2.5, "feeMinor": 800 },
+    { "km": 2.55, "priceKm": 2.6, "feeMinor": 1200 },
+    { "km": 4.0, "priceKm": 4.0, "feeMinor": 1200 },
+    { "km": 4.5, "priceKm": 4.5, "feeMinor": 1325 },
+    { "km": 5.0, "priceKm": 5.0, "feeMinor": 1450 },
+    { "km": 5.01, "priceKm": 5.1, "feeMinor": null, "error": "OUT_OF_RADIUS" }
+  ]
+}

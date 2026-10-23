@@ -15,12 +15,15 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { CartBar } from "../components/cart/CartBar";
+import { useCartBarInset } from "../components/cart/useCartBarInset";
 import { searchStyles } from "../components/search/searchStyles";
 import { StoreCard } from "../components/stores/StoreCard";
 import { openStorefront } from "../components/stores/StoreRow";
 import { useDropoff } from "../components/stores/useDropoff";
 import { Icon } from "../components/ui/Icon";
-import { isStoreCategory, STORES } from "../data/mock/stores";
+import { isStoreCategory } from "../data/mock/stores";
+import { useStores } from "../hooks/useStores";
 import {
   isStoreSectionId,
   type QuotedStore,
@@ -45,10 +48,12 @@ export default function StoresList() {
   const section = isStoreSectionId(params.section) ? params.section : "near-you";
   const category = isStoreCategory(params.category) ? params.category : null;
   const { dropoff } = useDropoff();
+  const cartInset = useCartBarInset();
 
+  const { stores: directory } = useStores();
   const stores = useMemo(
-    () => storesForSection(STORES, dropoff, section, category),
-    [dropoff, section, category],
+    () => storesForSection(directory, dropoff, section, category),
+    [directory, dropoff, section, category],
   );
   const cardWidth = width - SIDE * 2;
 
@@ -83,8 +88,9 @@ export default function StoresList() {
         initialNumToRender={6}
         windowSize={9}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 + cartInset }]}
       />
+      <CartBar placement="stack" />
     </View>
   );
 }

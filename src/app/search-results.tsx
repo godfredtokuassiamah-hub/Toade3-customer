@@ -22,6 +22,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { CartBar } from "../components/cart/CartBar";
+import { useCartBarInset } from "../components/cart/useCartBarInset";
 import { AppliedChipsRow } from "../components/discovery/AppliedChipsRow";
 import { toFoodCardItem } from "../components/discovery/cardItem";
 import { useFiltersTrigger } from "../components/filters/useFiltersTrigger";
@@ -70,6 +72,7 @@ export default function SearchResults() {
   const { width } = useWindowDimensions();
   const applied = useApplied("search");
   const context = useDiscoveryContext();
+  const cartInset = useCartBarInset();
 
   const firstPage = useMemo(
     () => buildQueryRequest(applied, context, "search", "results", RESULTS_PAGE_SIZE, null),
@@ -309,8 +312,9 @@ export default function SearchResults() {
         initialNumToRender={8}
         windowSize={9}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 + cartInset }]}
       />
+      <CartBar placement="stack" />
     </View>
   );
 }

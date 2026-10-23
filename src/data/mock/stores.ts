@@ -31,6 +31,11 @@ export type Store = {
   // Ratings are deliberately absent until real reviews exist.
   rating?: never;
   open: boolean;
+  // MOCK link to this store's own catalog vendor (src/data/mock/catalog.ts
+  // VENDORS). The vendor mirrors the store's name, logo and open state, and
+  // the storefront shows the vendor's menu. Unset → the "Storefront coming
+  // soon" fallback.
+  vendorId?: string;
 };
 
 export const STORE_CATEGORY_LABELS: Record<StoreCategory, string> = {
@@ -55,6 +60,7 @@ export function isStoreCategory(value: unknown): value is StoreCategory {
 export const STORES: readonly Store[] = [
   {
     id: "st-medie-foods",
+    vendorId: "v-medie-foods",
     name: "Medie Foods",
     category: "restaurants",
     logo: require("../../../assets/UI SCREEN/popular places/Ellipse 3.png"),
@@ -65,6 +71,7 @@ export const STORES: readonly Store[] = [
   },
   {
     id: "st-churros",
+    vendorId: "v-churros",
     name: "Churros",
     category: "bakery",
     logo: require("../../../assets/UI SCREEN/popular places/Ellipse 4.png"),
@@ -75,6 +82,7 @@ export const STORES: readonly Store[] = [
   },
   {
     id: "st-milk",
+    vendorId: "v-milk",
     name: "Milk",
     category: "groceries",
     logo: require("../../../assets/UI SCREEN/popular places/Ellipse 5.png"),
@@ -85,6 +93,7 @@ export const STORES: readonly Store[] = [
   },
   {
     id: "st-red-rock",
+    vendorId: "v-red-rock",
     name: "Red Rock",
     category: "restaurants",
     logo: require("../../../assets/UI SCREEN/popular places/Ellipse 6.png"),
@@ -95,6 +104,7 @@ export const STORES: readonly Store[] = [
   },
   {
     id: "st-gamesa",
+    vendorId: "v-gamesa",
     name: "Gamesa",
     category: "bakery",
     logo: require("../../../assets/UI SCREEN/popular places/Ellipse 7.png"),
@@ -105,6 +115,7 @@ export const STORES: readonly Store[] = [
   },
   {
     id: "st-airport-supermart",
+    vendorId: "v-airport-supermart",
     name: "Airport Supermart",
     category: "groceries",
     latitude: 5.622,
@@ -114,6 +125,7 @@ export const STORES: readonly Store[] = [
   },
   {
     id: "st-osu-fresh-market",
+    vendorId: "v-osu-fresh-market",
     name: "Osu Fresh Market",
     category: "groceries",
     latitude: 5.565,
@@ -123,6 +135,7 @@ export const STORES: readonly Store[] = [
   },
   {
     id: "st-medplus-pharmacy",
+    vendorId: "v-medplus-pharmacy",
     name: "MedPlus Pharmacy",
     category: "pharmacy",
     latitude: 5.6,
@@ -132,6 +145,7 @@ export const STORES: readonly Store[] = [
   },
   {
     id: "st-kanda-chemists",
+    vendorId: "v-kanda-chemists",
     name: "Kanda Chemists",
     category: "pharmacy",
     latitude: 5.64,
@@ -141,6 +155,7 @@ export const STORES: readonly Store[] = [
   },
   {
     id: "st-glowup-beauty",
+    vendorId: "v-glowup-beauty",
     name: "GlowUp Beauty",
     category: "health-beauty",
     latitude: 5.61,
@@ -150,6 +165,7 @@ export const STORES: readonly Store[] = [
   },
   {
     id: "st-circuit-hub",
+    vendorId: "v-circuit-hub",
     name: "Circuit Hub Electronics",
     category: "electronics",
     latitude: 5.615,
@@ -159,6 +175,7 @@ export const STORES: readonly Store[] = [
   },
   {
     id: "st-gadget-corner",
+    vendorId: "v-gadget-corner",
     name: "Gadget Corner",
     category: "electronics",
     latitude: 5.57,
@@ -168,6 +185,7 @@ export const STORES: readonly Store[] = [
   },
   {
     id: "st-petals-co",
+    vendorId: "v-petals-co",
     name: "Petals & Co.",
     category: "flowers",
     latitude: 5.606,
@@ -177,6 +195,7 @@ export const STORES: readonly Store[] = [
   },
   {
     id: "st-gift-box",
+    vendorId: "v-gift-box",
     name: "Gift Box Accra",
     category: "gifts",
     latitude: 5.625,
@@ -186,6 +205,7 @@ export const STORES: readonly Store[] = [
   },
   {
     id: "st-buildrite",
+    vendorId: "v-buildrite",
     name: "BuildRite Home & DIY",
     category: "home-diy",
     latitude: 5.59,
@@ -195,6 +215,7 @@ export const STORES: readonly Store[] = [
   },
   {
     id: "st-pro-sports",
+    vendorId: "v-pro-sports",
     name: "Pro Sports Arena",
     category: "sports",
     latitude: 5.65,

@@ -33,6 +33,8 @@ export type DeliveryQuote =
 // Fallback drop-off (central Accra) when no address is confirmed.
 export const DEFAULT_DROPOFF: LatLng = { latitude: 5.6037, longitude: -0.187 };
 export const MAX_DELIVERY_KM = 5;
+// Rider payload limit (place_order raises OVER_WEIGHT above it).
+export const MAX_PAYLOAD_G = 8000;
 
 // "35+ min": the blueprint gives no upper bound for zone 4, so cards show
 // 35-45 min plus prep time.

@@ -16,6 +16,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { CartBar } from "../components/cart/CartBar";
+import { useCartBarInset } from "../components/cart/useCartBarInset";
 import { catalogItemToFoodCardItem } from "../components/discovery/cardItem";
 import { searchStyles } from "../components/search/searchStyles";
 import { FoodCard, type FoodCardItem } from "../components/home/FoodCard";
@@ -41,11 +43,11 @@ export default function Favourites() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { ids } = useFavourites();
+  const cartInset = useCartBarInset();
 
   const items = useMemo(() => getItemsByIds(ids).map(catalogItemToFoodCardItem), [ids]);
   const cardWidth = Math.floor((width - SIDE * 2 - GAP) / 2);
 
-  // TODO(item): open item detail once the screen exists.
   const renderItem = useCallback<ListRenderItem<FoodCardItem>>(
     ({ item }) => <FoodCard item={item} width={cardWidth} showFavourite />,
     [cardWidth],
@@ -92,7 +94,7 @@ export default function Favourites() {
           items.length > 0 ? { paddingTop: barHeight } : null,
           // Root stack route above the tabs, so the floating tab bar is not
           // shown here; only the safe-area inset needs clearing.
-          { paddingBottom: insets.bottom + 24 },
+          { paddingBottom: insets.bottom + 24 + cartInset },
         ]}
       />
       {/* Transparent overlay bar: lets touches through except on its controls. */}
@@ -110,6 +112,7 @@ export default function Favourites() {
           Favourites
         </Text>
       </View>
+      <CartBar placement="stack" />
     </View>
   );
 }

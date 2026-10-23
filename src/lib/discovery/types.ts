@@ -212,7 +212,25 @@ export type MockVendor = {
   hours: { open: string; close: string };
   // Temporarily not accepting orders.
   paused: boolean;
+  // MOCK demo placeholder for the storefront stats row — replace with real
+  // review data (S7) before release. Absent = no rating shown (never 0/fake).
+  rating?: { value: number; count: number };
+  // MOCK brand art for the storefront (mirrors the Stores-tab store). Absent =
+  // current fallbacks (initials badge; first item photo / placeholder hero).
+  logo?: ImageSourcePropType;
+  cover?: ImageSourcePropType;
+  // MOCK contact/location data for the storefront "More info" sheet until the
+  // vendor profile API exists. Absent = that row is hidden.
+  // PLACEHOLDER only: "+233 20 000 NNNN", never a real number.
+  phone?: string;
+  // Short address / plus-code line, e.g. "JR3F+QV Accra".
+  addressLabel?: string;
+  latitude?: number;
+  longitude?: number;
+  serviceTypes?: ServiceType[];
 };
+
+export type ServiceType = "delivery" | "scheduled" | "pickup";
 
 export type MockItem = {
   item_id: string;
@@ -229,6 +247,11 @@ export type MockItem = {
   published: boolean;
   eta_mins: number;
   image?: ImageSourcePropType;
+  // MOCK promo flags (no promo system yet) — display only, never priced
+  // from. price_minor stays the CURRENT price; the struck-through original
+  // is derived from discountPercent (integer 1-90) purely for display.
+  popular?: boolean;
+  discountPercent?: number;
 };
 
 export type MockCatalog = {

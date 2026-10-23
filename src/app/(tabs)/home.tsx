@@ -13,6 +13,7 @@ import {
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useCartBarInset } from "../../components/cart/useCartBarInset";
 import { AppliedChipsRow } from "../../components/discovery/AppliedChipsRow";
 import { CategoryGrid } from "../../components/home/CategoryGrid";
 import { FilteredLoading, FilteredModule } from "../../components/home/FilteredHome";
@@ -33,7 +34,9 @@ import { useHomeUser } from "../../components/home/useHomeUser";
 import { useUserLocation } from "../../components/home/useUserLocation";
 import { getTabBarClearance } from "../../components/navigation/tabBarMetrics";
 import { SearchStateView } from "../../components/search/SearchStateView";
-import { homeData } from "../../data/mock/home";
+import { homeData, type PopularPlace } from "../../data/mock/home";
+import type { Store } from "../../data/mock/stores";
+import { useStores } from "../../hooks/useStores";
 import type { HomeShortcut } from "../../data/home/categoryShortcuts";
 import { setApplied, useApplied } from "../../lib/discovery/discoveryStore";
 import {
@@ -47,7 +50,18 @@ import { useDeliveryAddress } from "../../lib/location/DeliveryAddressContext";
 import { pickLocationLabel } from "../../lib/places/locationLabel";
 import { colors } from "../../theme";
 
-const FEED = buildHomeFeed(homeData);
+const POPULAR_MAX = 5;
+
+// Popular Places rail from the store directory: the stores with a logo, in
+// directory order (the same five places and logos as the static mock).
+// Falls back to the static list if no store has a logo.
+function popularFromStores(stores: readonly Store[]): PopularPlace[] {
+  const places = stores
+    .filter((s) => s.logo != null)
+    .slice(0, POPULAR_MAX)
+    .map((s) => ({ id: s.id, name: s.name, logo: s.logo as PopularPlace["logo"] }));
+  return places.length > 0 ? places : homeData.popularPlaces;
+}
 
 // Static feed rows, or the server-filtered rows once Home has filters.
 type Row = HomeFeedItem | FilteredFeedItem;
@@ -95,12 +109,13 @@ export default function Home() {
 
   // Sized for the expanded bar and never tied to compaction, so the bar
   // animating can't shift the feed; the last card clears it fully.
+  const cartInset = useCartBarInset();
   const contentStyle = useMemo(
     () => ({
       paddingTop: 8,
-      paddingBottom: getTabBarClearance(insets.bottom, fontScale),
+      paddingBottom: getTabBarClearance(insets.bottom, fontScale) + cartInset,
     }),
-    [insets.bottom, fontScale],
+    [insets.bottom, fontScale, cartInset],
   );
 
   // Applied Home filters: with none, Home stays the static mock feed.
@@ -108,12 +123,18 @@ export default function Home() {
   const filtered = !isAppliedDefault(appliedHome);
   const filterCount = appliedGroupCount(appliedHome);
   const filteredHome = useFilteredHome(appliedHome, filtered);
+  // Static feed; the Popular Places rail reads the store directory.
+  const { stores } = useStores();
+  const feed = useMemo(
+    () => buildHomeFeed({ ...homeData, popularPlaces: popularFromStores(stores) }),
+    [stores],
+  );
   const data = useMemo<Row[]>(
     () =>
       filtered
         ? buildFilteredFeed(filteredHome.response, filteredHome.loading, filteredHome.error)
-        : FEED,
-    [filtered, filteredHome.response, filteredHome.loading, filteredHome.error],
+        : feed,
+    [filtered, feed, filteredHome.response, filteredHome.loading, filteredHome.error],
   );
   const updateHome = useCallback((next: AppliedDiscovery) => setApplied("home", next), []);
   const retryHome = filteredHome.retry;

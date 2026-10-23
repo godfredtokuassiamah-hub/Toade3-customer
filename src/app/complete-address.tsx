@@ -30,11 +30,13 @@ import { Collapse } from "../components/ui/Collapse";
 import { FloatingLabelInput } from "../components/ui/FloatingLabelInput";
 import { KeyboardAwareScreen } from "../components/ui/KeyboardAwareScreen";
 import { PrimaryButton } from "../components/ui/PrimaryButton";
+import { RATE_LIMIT_MESSAGE } from "../lib/auth/authErrors";
 import { withTimeout } from "../lib/auth/profileCompletion";
 import { errorHaptic, selectionHaptic, successHaptic } from "../lib/haptics";
 import { useDeliveryAddress } from "../lib/location/DeliveryAddressContext";
 import { buildAddress } from "../lib/location/geocode";
 import type { LatLng, PlaceSuggestion } from "../lib/places/types";
+import { isRateLimitedError } from "../lib/security/rateLimitError";
 import {
   describeCoords,
   getDeviceCoords,
@@ -223,11 +225,12 @@ export default function CompleteAddress() {
       ).catch(() => {});
       if (router.canDismiss()) router.dismissAll();
       router.replace("/enable-location");
-    } catch {
+    } catch (e) {
       if (!mounted.current) return;
-      setSaveError(SAVE_ERROR);
+      const message = isRateLimitedError(e) ? RATE_LIMIT_MESSAGE : SAVE_ERROR;
+      setSaveError(message);
       errorHaptic();
-      AccessibilityInfo.announceForAccessibility(SAVE_ERROR);
+      AccessibilityInfo.announceForAccessibility(message);
     } finally {
       savingRef.current = false;
       if (mounted.current) setSaving(false);

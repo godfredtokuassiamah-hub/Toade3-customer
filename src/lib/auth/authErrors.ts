@@ -1,6 +1,7 @@
 // Classifies Supabase Auth errors without importing supabase-js, so it
 // unit-tests in isolation. Codes checked against @supabase/auth-js
 // ErrorCode (lib/error-codes) and the Supabase error-codes docs.
+import { isRateLimitPayload } from "../security/rateLimitError";
 
 export type AuthErrorKind = "invalid_code" | "rate_limited" | "network" | "unknown";
 
@@ -18,7 +19,12 @@ export function classifyAuthError(e: unknown): AuthErrorKind {
   if (e === null || typeof e !== "object") return "unknown";
   const { name, status, code, message } = e as ErrorLike;
 
-  if (status === 429 || (typeof code === "string" && RATE_LIMIT_CODES.has(code))) {
+  if (
+    status === 429 ||
+    (typeof code === "string" && RATE_LIMIT_CODES.has(code)) ||
+    // Also the DB limiter's T3429 / RATE_LIMITED shapes (0009).
+    isRateLimitPayload(e)
+  ) {
     return "rate_limited";
   }
   // Supabase returns otp_expired (403) for both a wrong and an expired email OTP.

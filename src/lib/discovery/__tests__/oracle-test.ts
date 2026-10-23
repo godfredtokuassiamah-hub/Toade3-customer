@@ -215,13 +215,14 @@ describe("ranking", () => {
   });
 
   test("price sorts tie-break by item_id", () => {
-    const asc = run({ sort: "price_asc" }).items ?? [];
+    // Every page: the catalog no longer fits in one 50-item page.
+    const asc = allItems({ sort: "price_asc" });
     for (let i = 1; i < asc.length; i++) {
       const a = asc[i - 1];
       const b = asc[i];
       expect(a.price_minor < b.price_minor || (a.price_minor === b.price_minor && a.item_id < b.item_id)).toBe(true);
     }
-    const desc = run({ sort: "price_desc" }).items ?? [];
+    const desc = allItems({ sort: "price_desc" });
     for (let i = 1; i < desc.length; i++) {
       const a = desc[i - 1];
       const b = desc[i];
@@ -304,14 +305,20 @@ describe("cursor pagination", () => {
 
 describe("home surface", () => {
   test("bounded rails, a vendor rail, distinct count once", () => {
-    const r = run({ surface: "home", limit: 10, filters: { category_ids: ["rice-meals", "local-dishes"] } });
+    const filters = { category_ids: ["rice-meals", "local-dishes"] };
+    const r = run({ surface: "home", limit: 10, filters });
     const itemModules = (r.modules ?? []).filter((m) => m.type === "items");
     expect(itemModules.map((m) => m.id)).toEqual(["cat-local-dishes", "cat-rice-meals"]);
     for (const m of itemModules) if (m.type === "items") expect(m.items.length).toBeLessThanOrEqual(10);
     expect((r.modules ?? []).some((m) => m.type === "vendors")).toBe(true);
     const appearances = itemModules.flatMap((m) => (m.type === "items" ? m.items.map((i) => i.item_id) : []));
     expect(appearances.filter((id) => id === "lm-jollof-chicken").length).toBe(2);
-    expect(r.item_count).toBe(new Set(appearances).size);
+    // Distinct count over every match, not over the (truncated) rails: an
+    // item in both categories counts once.
+    const matched = allIds({ filters });
+    expect(new Set(matched).size).toBe(matched.length);
+    expect(r.item_count).toBe(matched.length);
+    expect(matched).toEqual(expect.arrayContaining([...new Set(appearances)]));
   });
 });
 

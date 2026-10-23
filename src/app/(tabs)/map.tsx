@@ -26,6 +26,7 @@ import { AccessibilityInfo, StyleSheet, useWindowDimensions, View } from "react-
 import MapView, { type MapPressEvent, Marker, type Region } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useCartBarInset } from "../../components/cart/useCartBarInset";
 import { useFiltersTrigger } from "../../components/filters/useFiltersTrigger";
 import { MapTopBar } from "../../components/map/MapTopBar";
 import { StoreCarousel } from "../../components/map/StoreCarousel";
@@ -35,7 +36,7 @@ import { FEED_END_SPACING, getTabBarClearance } from "../../components/navigatio
 import { storeAccessibilityLabel } from "../../components/stores/StoreCard";
 import { openStorefront } from "../../components/stores/StoreRow";
 import { useDropoff } from "../../components/stores/useDropoff";
-import { STORES } from "../../data/mock/stores";
+import { useStores } from "../../hooks/useStores";
 import { selectionHaptic } from "../../lib/haptics";
 import { useDeliveryAddress } from "../../lib/location/DeliveryAddressContext";
 import {
@@ -60,7 +61,6 @@ const CAMERA_MS = 350;
 const CAMERA_LIFT = 0.18;
 // Gap between the carousel cards and the floating tab bar.
 const PREVIEW_GAP = 12;
-const CHIPS = mapChips(STORES);
 
 const orderIdsFrom = (list: readonly QuotedStore[], origin: QuotedStore) =>
   orderByProximity(list, origin.store).map((s) => s.store.id);
@@ -72,7 +72,10 @@ export default function MapScreen() {
   const { active } = useDeliveryAddress();
   const mapRef = useRef<MapView>(null);
 
-  const quoted = useMemo(() => quoteStores(STORES, dropoff), [dropoff]);
+  // Store directory via the query cache (mock placeholder until loaded).
+  const { stores } = useStores();
+  const chips = useMemo(() => mapChips(stores), [stores]);
+  const quoted = useMemo(() => quoteStores(stores, dropoff), [stores, dropoff]);
   const region = useMemo(() => ({ ...dropoff, ...DELTA }), [dropoff]);
   // Latest camera region, so selecting a store keeps the user's zoom.
   const regionRef = useRef<Region>(region);
@@ -187,7 +190,10 @@ export default function MapScreen() {
   const onBack = useCallback(() => router.navigate("/home"), []);
   const onTitle = useCallback(() => router.push("/location-picker"), []);
 
-  const previewBottom = getTabBarClearance(insets.bottom, fontScale) - FEED_END_SPACING + PREVIEW_GAP;
+  // The carousel sits above the cart bar when both show.
+  const cartInset = useCartBarInset();
+  const previewBottom =
+    getTabBarClearance(insets.bottom, fontScale) - FEED_END_SPACING + PREVIEW_GAP + cartInset;
 
   return (
     <View style={styles.root}>
@@ -227,7 +233,7 @@ export default function MapScreen() {
         topInset={insets.top}
         title={mapTitle(active?.title)}
         subtitle={storeCountLabel(visible.length)}
-        chips={CHIPS}
+        chips={chips}
         isSelected={isSelected}
         onToggleChip={onToggleChip}
         onBack={onBack}

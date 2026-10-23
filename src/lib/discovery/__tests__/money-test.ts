@@ -1,5 +1,6 @@
 /// <reference types="jest" />
 import {
+  formatCedi,
   formatMinor,
   formatMinorFixed,
   formatOpenMax,
@@ -53,6 +54,16 @@ describe("formatting", () => {
     expect(formatOpenMax(12000)).toBe("GHS 120+");
     expect(minorToText(4550)).toBe("45.50");
     expect(minorToText(5000)).toBe("50");
+  });
+
+  test.each([
+    [1089, "GH₵10.89"],
+    [800, "GH₵8.00"],
+    [123456, "GH₵1,234.56"],
+    [0, "GH₵0.00"],
+    [7, "GH₵0.07"],
+  ])("formatCedi(%d) -> %s", (minor, expected) => {
+    expect(formatCedi(minor)).toBe(expected);
   });
 
   test("priceSummary", () => {

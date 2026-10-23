@@ -1,6 +1,5 @@
 import { Image } from "expo-image";
-import { router } from "expo-router";
-import { memo } from "react";
+import { memo, useState } from "react";
 import { type ImageSourcePropType, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
@@ -13,6 +12,7 @@ import { formatMinorFixed } from "../../lib/discovery/money";
 import type { ItemStatus } from "../../lib/discovery/types";
 import { formatEta, formatGhs } from "../../lib/format";
 import { colors, fontFamily } from "../../theme";
+import { ItemDetailSheet } from "../item/ItemDetailSheet";
 import { FavouriteButton } from "../ui/FavouriteButton";
 import { Icon } from "../ui/Icon";
 
@@ -49,6 +49,9 @@ const STATUS_LABEL: Record<Exclude<ItemStatus, "available">, string> = {
 function FoodCardBase({ item, width, showFavourite = false }: Props) {
   const reducedMotion = useReducedMotion();
   const scale = useSharedValue(1);
+  // Item detail sheet: mounted while open plus its exit animation.
+  const [sheetMounted, setSheetMounted] = useState(false);
+  const [sheetVisible, setSheetVisible] = useState(false);
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
@@ -64,12 +67,12 @@ function FoodCardBase({ item, width, showFavourite = false }: Props) {
   const card = (
     <Pressable
       // Every item surface (Home rows, filtered Home, search results,
-      // favourites) opens the owning vendor's storefront.
-      // TODO(item): a dedicated item-detail screen could deep-link to this
-      // item within the storefront later.
-      onPress={() =>
-        router.push({ pathname: "/storefront/[vendorId]", params: { vendorId: item.vendorId } })
-      }
+      // favourites, storefront) opens the item detail sheet (an RN Modal,
+      // so no route is needed).
+      onPress={() => {
+        setSheetMounted(true);
+        setSheetVisible(true);
+      }}
       style={showFavourite ? styles.grow : undefined}
       onPressIn={() => {
         if (!reducedMotion) scale.set(withTiming(0.97, { duration: 120 }));
@@ -78,7 +81,7 @@ function FoodCardBase({ item, width, showFavourite = false }: Props) {
         if (!reducedMotion) scale.set(withTiming(1, { duration: 120 }));
       }}
       accessibilityRole="button"
-      accessibilityLabel={`${item.name}, from ${item.vendor}, ${price}, ${eta}${statusLabel ? `, ${statusLabel}` : ""}, opens ${item.vendor}`}
+      accessibilityLabel={`${item.name}, from ${item.vendor}, ${price}, ${eta}${statusLabel ? `, ${statusLabel}` : ""}, opens item details`}
     >
       <Animated.View style={[styles.card, { width }, pressStyle]}>
         <View style={[styles.imageBox, { width: imageWidth }, statusLabel != null && styles.dimmed]}>
@@ -123,11 +126,28 @@ function FoodCardBase({ item, width, showFavourite = false }: Props) {
     </Pressable>
   );
 
-  if (!showFavourite) return card;
+  const sheet = sheetMounted ? (
+    <ItemDetailSheet
+      item={item}
+      visible={sheetVisible}
+      onClose={() => setSheetVisible(false)}
+      onClosed={() => setSheetMounted(false)}
+    />
+  ) : null;
+
+  if (!showFavourite) {
+    return (
+      <>
+        {card}
+        {sheet}
+      </>
+    );
+  }
   return (
     <View style={styles.grow}>
       {card}
       <FavouriteButton itemId={item.id} variant="badge" style={styles.heart} />
+      {sheet}
     </View>
   );
 }

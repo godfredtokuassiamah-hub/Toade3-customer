@@ -1,8 +1,14 @@
 import { Tabs } from "expo-router";
+import { useEffect } from "react";
+import { StyleSheet, View } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
 
+import { CartBar } from "../../components/cart/CartBar";
 import { FloatingTabBar } from "../../components/navigation/FloatingTabBar";
 import { TabBarScrollProvider } from "../../components/navigation/TabBarScrollContext";
+// Side effect: starts the query cache (focus / online managers, persister).
+import "../../lib/backend/queryClient";
+import { startCartSync } from "../../services/cartSync";
 import { colors } from "../../theme";
 
 // Bottom tabs with the custom floating glass capsule. The provider shares the
@@ -14,8 +20,11 @@ import { colors } from "../../theme";
 // glass. Reduced Motion switches instantly.
 export default function TabsLayout() {
   const reducedMotion = useReducedMotion();
+  // Background server-cart sync (never blocks the local cart).
+  useEffect(() => startCartSync(), []);
   return (
     <TabBarScrollProvider>
+      <View style={styles.fill}>
       <Tabs
         initialRouteName="home"
         backBehavior="firstRoute"
@@ -32,6 +41,16 @@ export default function TabsLayout() {
         <Tabs.Screen name="orders" />
         <Tabs.Screen name="account" />
       </Tabs>
+      {/* Floating cart bar above every tab's scene and the tab bar; absolute
+          with box-none, so only the pill itself takes touches. */}
+      <CartBar placement="tabs" />
+      </View>
     </TabBarScrollProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  fill: {
+    flex: 1,
+  },
+});
