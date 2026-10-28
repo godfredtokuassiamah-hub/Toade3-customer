@@ -204,7 +204,18 @@ export default function Checkout() {
       {
         onSuccess: (order) => {
           successHaptic();
-          router.replace({ pathname: "/order/[id]", params: { id: order.orderId } });
+          // placed=1 opens the order-placed sheet; ETA only from the server quote.
+          router.replace({
+            pathname: "/order/[id]",
+            params: {
+              id: order.orderId,
+              placed: "1",
+              status: order.status,
+              ...(quote && quote.deliverable && quote.authoritative
+                ? { etaMin: String(quote.etaMins[0]), etaMax: String(quote.etaMins[1]) }
+                : null),
+            },
+          });
           clearCart();
         },
         onError: (e) => {

@@ -1,31 +1,30 @@
-// Category-shortcut grid beneath the search bar: a wrapping grid of 16
-// tiles, 4 per row, that scrolls WITH the Home page (it's one block inside
-// the Home FlatList, not its own scroller).
+// Category shortcuts beneath the search bar: all 16 tiles in ONE sideways
+// scrolling row, the same layout as the Stores tab quick buttons
+// (StoreCategoryTiles: 72pt tiles, 8pt gap, 14pt side padding), so the
+// shortcuts take a single row of Home instead of a 4-row grid.
 //
 // Each tile is a light-grey circle with 3D art and a label below. No
 // Reanimated layout/worklet animation here: the Home feed already bans
-// `entering` on virtualized cells, and this grid needs none.
+// `entering` on virtualized cells, and this row needs none.
 import { Image } from "expo-image";
-import { memo, useMemo } from "react";
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { memo, useCallback } from "react";
+import { FlatList, type ListRenderItem, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { HOME_SHORTCUTS, type HomeShortcut } from "../../data/home/categoryShortcuts";
 import { lightHaptic } from "../../lib/haptics";
 import { colors, fontFamily } from "../../theme";
 
-// Matches the 14pt side padding used by SearchRow and the results grid.
+// Matches the 14pt side padding used by SearchRow and the Stores tiles.
 const SIDE = 14;
-const GAP = 12;
-const COLUMNS = 4;
+const GAP = 8;
+const TILE = 72;
 const CIRCLE = 64;
 
 const Tile = memo(function Tile({
   shortcut,
-  width,
   onSelect,
 }: {
   shortcut: HomeShortcut;
-  width: number;
   onSelect: (shortcut: HomeShortcut) => void;
 }) {
   return (
@@ -36,9 +35,8 @@ const Tile = memo(function Tile({
       }}
       accessibilityRole="button"
       accessibilityLabel={shortcut.label}
-      // The 48pt row height (circle 64 + label) already clears the min
-      // touch target.
-      style={({ pressed }) => [styles.tile, { width }, pressed && styles.pressed]}
+      // The 72pt tile (circle 64 + label) already clears the min touch target.
+      style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
     >
       <View style={styles.circle}>
         <Image
@@ -59,38 +57,52 @@ const Tile = memo(function Tile({
   );
 });
 
+function Separator() {
+  return <View style={styles.separator} />;
+}
+
+const keyExtractor = (shortcut: HomeShortcut) => shortcut.id;
+
+// Fixed tile width, so the row can skip measuring.
+const getItemLayout = (_: ArrayLike<HomeShortcut> | null | undefined, index: number) => ({
+  length: TILE,
+  offset: SIDE + index * (TILE + GAP),
+  index,
+});
+
 export const CategoryGrid = memo(function CategoryGrid({
   onSelect,
 }: {
   onSelect: (shortcut: HomeShortcut) => void;
 }) {
-  const { width } = useWindowDimensions();
-  // Tile width from the window: side padding on both edges, 3 gaps between
-  // 4 columns. Floored so the row never overflows and wraps a 5th tile.
-  const tileWidth = useMemo(
-    () => Math.floor((width - SIDE * 2 - GAP * (COLUMNS - 1)) / COLUMNS),
-    [width],
+  const renderItem = useCallback<ListRenderItem<HomeShortcut>>(
+    ({ item }) => <Tile shortcut={item} onSelect={onSelect} />,
+    [onSelect],
   );
-
   return (
-    <View style={styles.grid}>
-      {HOME_SHORTCUTS.map((shortcut) => (
-        <Tile key={shortcut.id} shortcut={shortcut} width={tileWidth} onSelect={onSelect} />
-      ))}
-    </View>
+    <FlatList
+      data={HOME_SHORTCUTS}
+      keyExtractor={keyExtractor}
+      renderItem={renderItem}
+      getItemLayout={getItemLayout}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      ItemSeparatorComponent={Separator}
+      contentContainerStyle={styles.content}
+    />
   );
 });
 
 const styles = StyleSheet.create({
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+  content: {
     paddingHorizontal: SIDE,
     paddingTop: 16,
-    columnGap: GAP,
-    rowGap: 16,
+  },
+  separator: {
+    width: GAP,
   },
   tile: {
+    width: TILE,
     alignItems: "center",
     gap: 6,
   },

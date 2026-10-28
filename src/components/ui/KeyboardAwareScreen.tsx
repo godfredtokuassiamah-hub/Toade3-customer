@@ -2,7 +2,7 @@
 // checkout later). Uses React Native's built-in KeyboardAvoidingView so it
 // runs in Expo Go without extra native modules.
 //
-// behavior="padding" on both platforms: SDK 57 Android is always
+// behavior="padding" on both platforms: SDK 58 Android is always
 // edge-to-edge, so the window is not resized for the keyboard and padding is
 // needed there too. KeyboardAvoidingView computes padding from its own frame
 // vs the keyboard top, so if a device does resize the window the overlap is

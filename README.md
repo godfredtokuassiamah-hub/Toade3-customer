@@ -10,20 +10,20 @@ Native customer app for the **Toade3 Campus Logistics Platform**: identity, orde
 
 | Area | State |
 | --- | --- |
-| Project setup | Expo SDK 57, React Native, TypeScript, Expo Router |
+| Project setup | Expo SDK 58, React Native, TypeScript, Expo Router |
 | Logo / splash screen | Built (`src/app/index.tsx`), animated, moves to onboarding after about 3 s |
 | Onboarding | Slide 1 in progress (`src/app/onboarding.tsx`); slides 2 and 3 waiting on designs |
 | Typography | Airbnb Cereal planned; font files and licence not yet in the repo |
 | Backend (Supabase) | Not started |
 | Auth, catalog, ordering, tracking, handover | Not started (see the [delivery plan](#delivery-plan)) |
 
-The project is pinned to **SDK 57** because that's the version the App Store build of Expo Go currently supports. Upgrade once Expo Go ships SDK 58, or once the team moves to development builds.
+The project is on **SDK 58** to match the App Store build of Expo Go, which only runs the latest SDK. Native modules that aren't in Expo Go need a development build.
 
 ---
 
 ## Getting started
 
-**Prerequisites:** Node.js LTS (v20+), npm, and Expo Go on a phone (or an Android emulator).
+**Prerequisites:** Node.js 22.13+ or 24.3+ (required by SDK 58), npm, and Expo Go on a phone (or an Android emulator).
 
 ```bash
 npm install        # install dependencies
@@ -42,7 +42,7 @@ npx expo-doctor              # check dependency / config health
 npx expo install --fix       # fix incompatible package versions
 ```
 
-Run typecheck and lint before you call any task done. Expo changes a lot between SDK releases, so check APIs against the [SDK 57 docs](https://docs.expo.dev/versions/v57.0.0/) rather than memory. `AGENTS.md` has the full working rules.
+Run typecheck and lint before you call any task done. Expo changes a lot between SDK releases, so check APIs against the [SDK 58 docs](https://docs.expo.dev/versions/v58.0.0/) rather than memory. `AGENTS.md` has the full working rules.
 
 ### Expo Go vs development builds
 

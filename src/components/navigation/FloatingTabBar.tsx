@@ -80,7 +80,11 @@ const ICON_FADE_MS = 180;
 const LABEL_INACTIVE = colors.tabInactive;
 const LABEL_ACTIVE = colors.tabActive;
 
-type Navigation = BottomTabBarProps["navigation"];
+// SDK 58 (standard-navigation tabs): the tab bar gets an `emitter` and
+// `navigateToTab(routeKey)` instead of the navigation prop. `state.routes` is
+// every declared tab in order, with placeholder keys for lazy ones.
+type Emitter = BottomTabBarProps["emitter"];
+type NavigateToTab = BottomTabBarProps["navigateToTab"];
 type Route = BottomTabBarProps["state"]["routes"][number];
 
 type TabItemProps = {
@@ -89,7 +93,8 @@ type TabItemProps = {
   focusedIndex: number;
   icon: IconName;
   label: string;
-  navigation: Navigation;
+  emitter: Emitter;
+  navigateToTab: NavigateToTab;
   onReselect: () => void;
   onItemLayout: (index: number, layout: TabLayout) => void;
 };
@@ -100,7 +105,8 @@ const TabItem = memo(function TabItem({
   focusedIndex,
   icon,
   label,
-  navigation,
+  emitter,
+  navigateToTab,
   onReselect,
   onItemLayout,
 }: TabItemProps) {
@@ -153,7 +159,7 @@ const TabItem = memo(function TabItem({
 
   // React Navigation's tab press contract: listeners can preventDefault.
   const onPress = () => {
-    const event = navigation.emit({
+    const event = emitter.emit({
       type: "tabPress",
       target: route.key,
       canPreventDefault: true,
@@ -165,12 +171,12 @@ const TabItem = memo(function TabItem({
     }
     if (isTabChange(focusedIndex, index, event.defaultPrevented)) {
       selectionHaptic();
-      navigation.navigate(route.name, route.params);
+      navigateToTab(route.key);
     }
   };
 
   const onLongPress = () => {
-    navigation.emit({ type: "tabLongPress", target: route.key });
+    emitter.emit({ type: "tabLongPress", target: route.key });
   };
 
   const onLayout = (event: LayoutChangeEvent) => {
@@ -225,7 +231,11 @@ const TabItem = memo(function TabItem({
   );
 });
 
-export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
+export function FloatingTabBar({
+  state,
+  emitter,
+  navigateToTab,
+}: BottomTabBarProps) {
   const { width, fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
@@ -309,7 +319,8 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
                 focusedIndex={state.index}
                 icon={config.icon}
                 label={config.label}
-                navigation={navigation}
+                emitter={emitter}
+                navigateToTab={navigateToTab}
                 onReselect={expand}
                 onItemLayout={onItemLayout}
               />

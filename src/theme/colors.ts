@@ -11,6 +11,8 @@ export const colors = {
   disabledFill: "#D9D9D9",
   disabledText: "#9E9E9E",
   error: "#D93025",
+  // Status lines on the order-placed sheet.
+  success: "#1E7F4F",
   // Deep crimson for "Required" badges and the required-group flash.
   requiredRed: "#B00020",
   white: "#FFFFFF",

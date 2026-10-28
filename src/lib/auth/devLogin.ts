@@ -29,6 +29,8 @@ export function isDevLoginCode(code: string): boolean {
 let devProfile: Profile | null = null;
 
 export function startDevSession(): void {
+  // Release builds: dead code, so the dev profile below is never bundled.
+  if (!__DEV__) return;
   // Name + phone only, so dev login goes through the address step.
   devProfile = {
     full_name: "Toade3 Tester",

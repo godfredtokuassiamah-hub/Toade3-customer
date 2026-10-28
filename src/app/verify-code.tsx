@@ -31,6 +31,7 @@ import { RATE_LIMIT_MESSAGE } from "../lib/auth/authErrors";
 import { formatCountdown, OTP_LENGTH, parseSentAt } from "../lib/auth/otp";
 import { routeForProfile, withTimeout } from "../lib/auth/profileCompletion";
 import { errorHaptic, lightHaptic, successHaptic } from "../lib/haptics";
+import { useSensitiveScreen } from "../lib/security/useSensitiveScreen";
 import { isValidEmail, normalizeEmail } from "../lib/validation/email";
 import {
   isInvalidCodeError,
@@ -63,6 +64,8 @@ const PROFILE_TIMEOUT_MS = 8000;
 type ResendStatus = "sent" | "error" | null;
 
 export default function VerifyCode() {
+  // No screenshots / recordings of the OTP screen (Docs/security/hardening.md).
+  useSensitiveScreen();
   const params = useLocalSearchParams<{ email?: string; sentAt?: string }>();
   // Never trust the param: normalize, then validate below.
   const rawEmail: unknown = params.email;

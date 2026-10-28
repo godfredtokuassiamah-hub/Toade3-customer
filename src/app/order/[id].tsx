@@ -1,14 +1,22 @@
 // Order confirmation, opened by checkout after place_order succeeds: order
 // number, status, items and the server total. Minimal on purpose; the
 // Orders tab (another tool) owns order history and tracking.
+//
+// Checkout replaces itself with this route (so back can't return to it) and
+// passes placed=1: the OrderPlacedSheet then slides up over this detail.
+// "Track order" closes the sheet and leaves this detail visible; Back to
+// home, drag down, backdrop tap and Android back dismiss to Home.
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { OrderPlacedSheet } from "../../components/order/OrderPlacedSheet";
 import { Icon } from "../../components/ui/Icon";
 import { useOrder } from "../../hooks/useMyOrders";
 import { formatMinorFixed } from "../../lib/discovery/money";
+import { isOrderStatus, parseEtaParams } from "../../lib/orders/orderPlaced";
 import type { OrderStatus } from "../../services/orders";
 import { colors, fontFamily } from "../../theme";
 
@@ -27,10 +35,33 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
 
 export default function OrderConfirmation() {
   const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, placed, status, etaMin, etaMax } = useLocalSearchParams<{
+    id: string;
+    placed?: string;
+    status?: string;
+    etaMin?: string;
+    etaMax?: string;
+  }>();
   const { data: order, isPending, isError } = useOrder(id);
 
   const goHome = () => router.navigate("/home");
+
+  // Order-placed sheet: where to go once its exit animation finishes.
+  const [sheetOpen, setSheetOpen] = useState(placed === "1");
+  const nextRef = useRef<"home" | "track">("home");
+  const onTrack = () => {
+    nextRef.current = "track";
+    setSheetOpen(false);
+  };
+  const onSheetHome = () => {
+    nextRef.current = "home";
+    setSheetOpen(false);
+  };
+  const onSheetClosed = () => {
+    router.setParams({ placed: undefined });
+    // Checkout was replaced, so this can never land back on it.
+    if (nextRef.current === "home") router.dismissTo("/home");
+  };
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -96,6 +127,16 @@ export default function OrderConfirmation() {
           <Text style={styles.buttonText}>Back to Home</Text>
         </Pressable>
       </View>
+      <OrderPlacedSheet
+        visible={sheetOpen}
+        order={order ?? null}
+        fallbackStatus={isOrderStatus(status) ? status : "pending"}
+        orderId={id}
+        eta={parseEtaParams(etaMin, etaMax)}
+        onTrack={onTrack}
+        onHome={onSheetHome}
+        onClosed={onSheetClosed}
+      />
     </View>
   );
 }

@@ -14,8 +14,9 @@ import { colors } from "../../theme";
 // Bottom tabs with the custom floating glass capsule. The provider shares the
 // bar's compaction state with Home's scroll handler. Screens stay mounted
 // once visited (default lazy, no unmount/popToTop), so each tab keeps its
-// scroll position. Android back from any other tab returns to Home first,
-// then exits. Switching tabs cross-fades the scenes (opacity only, no layout
+// scroll position. Home is the first declared screen, so it opens first and
+// Android back (backBehavior "firstRoute") from any other tab returns to Home
+// first, then exits. SDK 58 removed the navigator `initialRouteName` prop. Switching tabs cross-fades the scenes (opacity only, no layout
 // move); the bar renders outside the scenes, so the fade never touches the
 // glass. Reduced Motion switches instantly.
 export default function TabsLayout() {
@@ -26,7 +27,6 @@ export default function TabsLayout() {
     <TabBarScrollProvider>
       <View style={styles.fill}>
       <Tabs
-        initialRouteName="home"
         backBehavior="firstRoute"
         screenOptions={{
           headerShown: false,

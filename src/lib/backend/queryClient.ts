@@ -9,7 +9,7 @@
 //
 // Side effects run once on import (skipped under jest):
 //   - focusManager <- AppState ("active" = focused)
-//   - onlineManager <- NetInfo (included in Expo Go, SDK 57)
+//   - onlineManager <- NetInfo (included in Expo Go, SDK 58)
 //   - persistQueryClient -> AsyncStorage, ONLY public catalog/store queries
 //     (isPersistable), busted by CACHE_VERSION, max age 24 h. Mutations are
 //     never persisted.

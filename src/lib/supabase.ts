@@ -1,4 +1,4 @@
-// Configured Supabase client (Expo "Using Supabase" guide, SDK 57).
+// Configured Supabase client (Expo "Using Supabase" guide, SDK 58).
 //
 // Storage: native sessions go to expo-secure-store (Keychain / Keystore)
 // through a chunking adapter, because a session JSON is often 2-4KB and

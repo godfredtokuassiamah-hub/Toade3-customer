@@ -1,6 +1,6 @@
 // Static map preview for the "More info" sheet, centred on the vendor.
-// react-native-maps is "Included in Expo Go" for SDK 57
-// (https://docs.expo.dev/versions/v57.0.0/sdk/map-view/), default provider
+// react-native-maps is "Included in Expo Go" for SDK 58
+// (https://docs.expo.dev/versions/v58.0.0/sdk/map-view/), default provider
 // (Apple Maps on iOS, Google on Android; no key needed in Expo Go).
 //
 // - Gestures off and pointerEvents "none" on the map, so it never traps the
