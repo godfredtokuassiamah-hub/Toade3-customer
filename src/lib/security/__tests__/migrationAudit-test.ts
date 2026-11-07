@@ -27,6 +27,7 @@ const MIGRATIONS = [
   "0007_order_functions.sql",
   "0008_catalog_seed.sql",
   "0009_rate_limits.sql",
+  "0010_order_eta.sql",
 ];
 
 // Table-wide INSERT/UPDATE/DELETE grants to `authenticated` that were

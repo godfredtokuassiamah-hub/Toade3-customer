@@ -27,6 +27,7 @@ import {
   quoteDelivery as localQuote,
   zoneFor,
 } from "../lib/stores/deliveryQuote";
+import { computeEta, type Eta, ETA_MODEL } from "../lib/orders/etaModel";
 import { supabase } from "../lib/supabase";
 
 export type OrderStatus =
@@ -115,6 +116,27 @@ export type OrderDetail = OrderSummary & {
 };
 
 export type CancelResult = { orderId: string; status: OrderStatus; version: number };
+
+// Live tracking (order_tracking RPC, 0010). Times are epoch ms.
+export type OrderTracking = {
+  status: OrderStatus;
+  version: number;
+  acceptedAt: number | null;
+  prepMinutes: number | null;
+  readyBy: number | null;
+  pickedUpAt: number | null;
+  deliveredAt: number | null;
+  rejectReason: string | null;
+  // Pending only: the store must accept by then or the order is rejected.
+  acceptDeadline: number | null;
+  // Only once a platform rider is assigned.
+  rider: { name: string; lat: number | null; lng: number | null; at: number | null } | null;
+  eta: Eta;
+  // "server" = 0010 deployed; "local" = estimated on the device (mock /
+  // before 0010), from the same model.
+  source: "server" | "local";
+  simulated: boolean;
+};
 
 // ---- Local estimate / simulation ----
 
@@ -461,6 +483,7 @@ function cancelOrderOnce(orderId: string, expectedVersion: number): Promise<Canc
     mock: () => {
       const o = mockOrders.find((m) => m.orderId === orderId);
       if (!o) throw new BackendError("ORDER_NOT_FOUND", "ORDER_NOT_FOUND");
+      simulate(o, Date.now());
       if (o.version !== expectedVersion) throw new BackendError("STALE_VERSION", "STALE_VERSION");
       if (o.status !== "pending" && o.status !== "accepted") {
         throw new BackendError("NOT_CANCELLABLE", "NOT_CANCELLABLE");
@@ -486,7 +509,7 @@ export function listMyOrders(): Promise<OrderSummary[]> {
         .limit(50);
       return unwrap(res as unknown as Res<OrderRow[]>).map(toSummary);
     },
-    mock: () => mockOrders.map(summary),
+    mock: () => mockOrders.map((o) => summary(simulate(o, Date.now()))),
   });
 }
 
@@ -496,12 +519,225 @@ export function getOrder(orderId: string): Promise<OrderDetail | null> {
     op: "read",
     requiresAuth: true,
     remote: async () => {
-      if (orderId.startsWith("mock-")) return mockOrders.find((o) => o.orderId === orderId) ?? null;
+      if (orderId.startsWith("mock-")) return mockFind(orderId);
       const res = await supabase.from("orders").select(DETAIL_COLUMNS).eq("id", orderId).maybeSingle();
       if (res.error) unwrap(res as unknown as Res<null>);
       const row = res.data as unknown as OrderRow | null;
       return row ? toDetail(row) : null;
     },
-    mock: () => mockOrders.find((o) => o.orderId === orderId) ?? null,
+    mock: () => mockFind(orderId),
+  });
+}
+
+// ---- Live tracking (0010) ----
+//
+// DEV-ONLY simulator for mock orders, so the whole Uber/Bolt-style flow can
+// be seen in Expo Go without the vendor or rider apps. Compressed clock:
+// store accepts at +30 s (prep = store default max), food ready at +90 s,
+// rider "Kwame" picks up at +120 s and arrives at +240 s, moving along the
+// store -> drop-off line. Cancelling works only before +30 s, exactly like a
+// real pending order. Never runs in release builds (mock orders can't exist
+// there: mockPlaceOrder throws outside __DEV__).
+const SIM = { acceptS: 30, readyS: 90, pickupS: 120, deliverS: 240 } as const;
+const SIM_RIDER = "Kwame";
+type SimTimeline = {
+  acceptedAt: number | null;
+  readyBy: number | null;
+  pickedUpAt: number | null;
+  deliveredAt: number | null;
+  promisedTo: number | null;
+};
+const simTimelines = new Map<string, SimTimeline>();
+
+function simTimeline(o: OrderDetail): SimTimeline {
+  let t = simTimelines.get(o.orderId);
+  if (!t) {
+    t = { acceptedAt: null, readyBy: null, pickedUpAt: null, deliveredAt: null, promisedTo: null };
+    simTimelines.set(o.orderId, t);
+  }
+  return t;
+}
+
+function simulate(o: OrderDetail, now: number): OrderDetail {
+  if (!o.mock || o.status === "cancelled" || o.status === "rejected" || o.status === "delivered") return o;
+  const created = Date.parse(o.createdAt);
+  const s = (now - created) / 1000;
+  const t = simTimeline(o);
+  const prep = getVendorLocation(o.vendorId).prepMins;
+  const step = (status: OrderStatus) => {
+    if (o.status !== status) {
+      o.status = status;
+      o.version += 1;
+    }
+  };
+  if (s >= SIM.acceptS && t.acceptedAt == null) {
+    t.acceptedAt = created + SIM.acceptS * 1000;
+    t.readyBy = t.acceptedAt + prep[1] * 60_000;
+    const eta = mockEtaFor(o, t, "preparing", t.acceptedAt);
+    t.promisedTo = eta.kind === "window" ? eta.to : null;
+    step("preparing");
+  }
+  if (s >= SIM.readyS && o.status === "preparing") step("ready");
+  if (s >= SIM.pickupS && o.status === "ready") {
+    t.pickedUpAt = created + SIM.pickupS * 1000;
+    step("out_for_delivery");
+  }
+  if (s >= SIM.deliverS && o.status === "out_for_delivery") {
+    t.deliveredAt = created + SIM.deliverS * 1000;
+    step("delivered");
+  }
+  return o;
+}
+
+function mockFind(orderId: string): OrderDetail | null {
+  const o = mockOrders.find((m) => m.orderId === orderId);
+  return o ? simulate(o, Date.now()) : null;
+}
+
+// Simulated rider position: parked at the store until pickup, then along
+// the straight store -> drop-off line.
+function simRider(o: OrderDetail, t: SimTimeline, now: number): OrderTracking["rider"] {
+  if (t.acceptedAt == null || o.status === "cancelled" || o.status === "rejected") return null;
+  const store = getVendorLocation(o.vendorId);
+  let f = 0;
+  if (t.pickedUpAt != null) {
+    f = Math.min(1, (now - t.pickedUpAt) / ((SIM.deliverS - SIM.pickupS) * 1000));
+  }
+  return {
+    name: SIM_RIDER,
+    lat: store.latitude + (o.dropoff.latitude - store.latitude) * f,
+    lng: store.longitude + (o.dropoff.longitude - store.longitude) * f,
+    at: now,
+  };
+}
+
+function kmBetween(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }) {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLng = toRad(b.longitude - a.longitude);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.latitude)) * Math.cos(toRad(b.latitude)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+function mockEtaFor(o: OrderDetail, t: SimTimeline, status: OrderStatus, now: number): Eta {
+  const store = getVendorLocation(o.vendorId);
+  const rider = status === "pending" ? null : simRider(o, t, now);
+  const riderPoint = rider && rider.lat != null && rider.lng != null ? { latitude: rider.lat, longitude: rider.lng } : null;
+  return computeEta({
+    status,
+    now,
+    distanceKm: o.distanceKm,
+    prepMins: store.prepMins,
+    acceptedAt: t.acceptedAt,
+    readyBy: t.readyBy,
+    pickedUpAt: t.pickedUpAt,
+    riderToStoreKm: riderPoint ? kmBetween(riderPoint, store) : null,
+    riderToDropKm: riderPoint && status === "out_for_delivery" ? kmBetween(riderPoint, o.dropoff) : null,
+    promisedTo: t.promisedTo,
+  });
+}
+
+// Device-side estimate for an order without 0010 data (local source).
+export function localTracking(o: OrderDetail, now = Date.now()): OrderTracking {
+  const t: SimTimeline = o.mock
+    ? simTimeline(o)
+    : { acceptedAt: null, readyBy: null, pickedUpAt: null, deliveredAt: null, promisedTo: null };
+  const created = Date.parse(o.createdAt);
+  return {
+    status: o.status,
+    version: o.version,
+    acceptedAt: t.acceptedAt,
+    prepMinutes: t.acceptedAt != null ? getVendorLocation(o.vendorId).prepMins[1] : null,
+    readyBy: t.readyBy,
+    pickedUpAt: t.pickedUpAt,
+    deliveredAt: t.deliveredAt,
+    rejectReason: null,
+    acceptDeadline:
+      o.status === "pending" && Number.isFinite(created) ? created + ETA_MODEL.acceptTimeoutMins * 60_000 : null,
+    rider: o.mock ? simRider(o, t, now) : null,
+    eta: mockEtaFor(o, t, o.status, now),
+    source: "local",
+    simulated: o.mock,
+  };
+}
+
+type TrackingRow = {
+  status: OrderStatus;
+  version: number;
+  accepted_at: string | null;
+  prep_minutes: number | null;
+  ready_by: string | null;
+  picked_up_at: string | null;
+  delivered_at: string | null;
+  reject_reason: string | null;
+  accept_deadline: string | null;
+  rider: { name: string; lat: number | null; lng: number | null; at: string | null } | null;
+  eta:
+    | { kind: "none" }
+    | { kind: "duration"; mins: [number, number] }
+    | { kind: "window"; from: string; to: string; basis: "store" | "rider"; late: boolean };
+};
+
+const ms = (s: string | null | undefined): number | null => {
+  if (!s) return null;
+  const n = Date.parse(s);
+  return Number.isFinite(n) ? n : null;
+};
+
+export function parseTrackingRow(r: TrackingRow): OrderTracking {
+  let eta: Eta = { kind: "none" };
+  if (r.eta?.kind === "duration" && Array.isArray(r.eta.mins)) {
+    eta = { kind: "duration", mins: [Number(r.eta.mins[0]), Number(r.eta.mins[1])] };
+  } else if (r.eta?.kind === "window") {
+    const from = ms(r.eta.from);
+    const to = ms(r.eta.to);
+    if (from != null && to != null) {
+      eta = { kind: "window", from, to, basis: r.eta.basis === "rider" ? "rider" : "store", late: !!r.eta.late };
+    }
+  }
+  return {
+    status: r.status,
+    version: r.version,
+    acceptedAt: ms(r.accepted_at),
+    prepMinutes: r.prep_minutes,
+    readyBy: ms(r.ready_by),
+    pickedUpAt: ms(r.picked_up_at),
+    deliveredAt: ms(r.delivered_at),
+    rejectReason: r.reject_reason,
+    acceptDeadline: ms(r.accept_deadline),
+    rider: r.rider ? { name: r.rider.name, lat: r.rider.lat, lng: r.rider.lng, at: ms(r.rider.at) } : null,
+    eta,
+    source: "server",
+    simulated: false,
+  };
+}
+
+// Live tracking for one order. Server (0010) when deployed; null when the
+// RPC doesn't exist yet, so the screen falls back to localTracking(order).
+export function getOrderTracking(orderId: string): Promise<OrderTracking | null> {
+  return backend.run({
+    resource: "orders.read",
+    op: "read",
+    requiresAuth: true,
+    remote: async () => {
+      if (orderId.startsWith("mock-")) {
+        const o = mockFind(orderId);
+        return o ? localTracking(o) : null;
+      }
+      const res = await supabase.rpc("order_tracking", { p_order_id: orderId });
+      if (res.error) {
+        const err = mapBackendError(res.error, res.status);
+        if (err.code === "BACKEND_MISSING") return null;
+        throw err;
+      }
+      return parseTrackingRow(res.data as TrackingRow);
+    },
+    mock: () => {
+      const o = mockFind(orderId);
+      return o ? localTracking(o) : null;
+    },
   });
 }

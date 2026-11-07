@@ -12,7 +12,12 @@ import {
   shouldRefresh,
 } from "../../lib/places/locationLabel";
 import type { LatLng } from "../../lib/places/types";
-import { describeCoords, getDeviceCoords, readPermission } from "../../services/deviceLocation";
+import {
+  type DescribedPlace,
+  describeCoords,
+  getDeviceCoords,
+  readPermission,
+} from "../../services/deviceLocation";
 import { saveCurrentLocation } from "../../services/profile";
 
 const SAVE_DISTANCE_M = 100;
@@ -21,14 +26,20 @@ type SavedPoint = { coords: LatLng; label: string | null };
 
 // Module-level so the throttle and label survive Home remounts in the same
 // JS session.
-let cached: { label: string | null; at: number | null } = { label: null, at: null };
+// `place` is the last described fix (null until one resolves), used by the
+// "you've moved" prompt.
+let cached: { label: string | null; place: DescribedPlace | null; at: number | null } = {
+  label: null,
+  place: null,
+  at: null,
+};
 let lastSaved: SavedPoint | null = null;
 let inFlight = false;
 
 // Seeds the cache after another screen (enable-location) captured and saved
 // the location, so Home doesn't immediately repeat the work.
 export function primeUserLocation(label: string | null, coords: LatLng): void {
-  cached = { label, at: Date.now() };
+  cached = { label, place: cached.place, at: Date.now() };
   lastSaved = { coords, label };
 }
 
@@ -38,13 +49,19 @@ export type SavedLocation = {
   lng: number | null;
 };
 
-export function useUserLocation(saved: SavedLocation): {
+type LiveState = {
   liveLabel: string | null;
+  // Described device position; null without permission or before a fix.
+  livePlace: DescribedPlace | null;
   permissionGranted: boolean;
-} {
-  const [state, setState] = useState<{ liveLabel: string | null; permissionGranted: boolean }>(
-    { liveLabel: null, permissionGranted: false },
-  );
+};
+
+export function useUserLocation(saved: SavedLocation): LiveState {
+  const [state, setState] = useState<LiveState>({
+    liveLabel: null,
+    livePlace: null,
+    permissionGranted: false,
+  });
   // Latest saved profile point, read inside the async refresh.
   const savedRef = useRef(saved);
   useEffect(() => {
@@ -59,6 +76,7 @@ export function useUserLocation(saved: SavedLocation): {
       if (cancelled) return;
       setState({
         liveLabel: perm.granted ? cached.label : null,
+        livePlace: perm.granted ? cached.place : null,
         permissionGranted: perm.granted,
       });
       if (!perm.granted || inFlight) return;
@@ -69,8 +87,10 @@ export function useUserLocation(saved: SavedLocation): {
         const place = await describeCoords(coords);
         // Geocode failure keeps the previous label.
         const label = place?.shortLabel ?? cached.label;
-        cached = { label, at: Date.now() };
-        if (!cancelled) setState({ liveLabel: label, permissionGranted: true });
+        cached = { label, place: place ?? cached.place, at: Date.now() };
+        if (!cancelled) {
+          setState({ liveLabel: label, livePlace: cached.place, permissionGranted: true });
+        }
 
         const s = savedRef.current;
         const prev: SavedPoint | null =

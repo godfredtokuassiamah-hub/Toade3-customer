@@ -207,3 +207,15 @@ Orders owner change (not applied by 0009; ship as a NEW migration that runs afte
 
 - `public.place_order`: after the replay block `if found then return public.t3_order_result(v_existing, true); end if;` (three lines in 0007) add `perform ratelimit.check('order.place');`
 - `public.cancel_order`: after the `INVALID_INPUT` check add `perform ratelimit.check('order.cancel');`
+
+
+## Live delivery time and vendor actions (0010)
+
+Run `supabase/migrations/0010_order_eta.sql` in the SQL Editor after 0009. Re-running is safe. Written and statically reviewed only; test it on a branch first.
+
+- Adds the order timeline (`accepted_at`, `ready_by`, `picked_up_at`, ...), rider fields, `vendor_members`, and the ETA model `t3_order_eta` (mirrors `src/lib/orders/etaModel.ts`; `etaModel-sql-test.ts` keeps the constants in sync).
+- Customer app: `order_tracking(order_id)`. Until 0010 is deployed the app estimates on the device with the same model.
+- Vendor app (members of `vendor_members` only): `vendor_accept_order(order, version, prep_minutes)`, `vendor_add_delay`, `vendor_mark_ready`, `vendor_reject_order`.
+- Rider dispatch backend (service_role only): `rider_assign`, `rider_update_location`, `rider_picked_up`, `rider_delivered`.
+- Accept timeout: schedule `select public.expire_unaccepted_orders()` every minute with pg_cron (8-minute deadline).
+- Realtime: `alter publication supabase_realtime add table public.orders;`

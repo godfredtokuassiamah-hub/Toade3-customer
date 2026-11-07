@@ -20,6 +20,10 @@ const GLYPHS = {
   help: { sf: "questionmark.circle", material: "help" },
   minusCircle: { sf: "minus.circle", material: "do_not_disturb_on" },
   plusCircle: { sf: "plus.circle.fill", material: "add_circle" },
+  // Order tracking screen.
+  phone: { sf: "phone", material: "call" },
+  menuBook: { sf: "menucard", material: "menu_book" },
+  share: { sf: "square.and.arrow.up", material: "ios_share" },
 } satisfies Record<string, { sf: IosName; material: MaterialName }>;
 
 export type ExtraIconName = keyof typeof GLYPHS;

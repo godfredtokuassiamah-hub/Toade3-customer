@@ -28,7 +28,9 @@ export type BusinessErrorCode =
   | "NOT_CANCELLABLE"
   | "INVALID_INPUT"
   | "VENDOR_UNAVAILABLE"
-  | "ORDER_NOT_FOUND";
+  | "ORDER_NOT_FOUND"
+  // 0010: the order isn't in a state that allows this vendor action.
+  | "INVALID_TRANSITION";
 
 export type BackendErrorCode =
   | BusinessErrorCode
@@ -56,6 +58,7 @@ export const SQLSTATE_BY_CODE: Readonly<Record<BusinessErrorCode, string>> = {
   INVALID_INPUT: "T3010",
   VENDOR_UNAVAILABLE: "T3011",
   ORDER_NOT_FOUND: "T3012",
+  INVALID_TRANSITION: "T3013",
 };
 
 const BUSINESS_CODES = new Set<string>(Object.keys(SQLSTATE_BY_CODE));

@@ -25,6 +25,7 @@ import {
   type HomeFeedItem,
 } from "../../components/home/homeFeed";
 import { HomeTopBar } from "../../components/home/HomeTopBar";
+import { MovedLocationBanner } from "../../components/home/MovedLocationBanner";
 import { PopularPlaces } from "../../components/home/PopularPlaces";
 import { PromoBanner } from "../../components/home/PromoBanner";
 import { SearchRow } from "../../components/home/SearchRow";
@@ -269,7 +270,7 @@ export default function Home() {
   }, [nextRoute]);
   // Picked address > live device location > saved location (permission
   // on, fix pending) > saved delivery address > fallback.
-  const { liveLabel, permissionGranted } = useUserLocation(savedLocation);
+  const { liveLabel, livePlace, permissionGranted } = useUserLocation(savedLocation);
   const locationLabel = pickLocationLabel({
     picked: activeAddress?.title,
     live: liveLabel,
@@ -289,6 +290,9 @@ export default function Home() {
         locationLabel={locationLabel}
         scrollY={scrollY}
       />
+      {/* Offers the current position when the user is 500 m+ from the
+          delivery address; never switches it on its own. */}
+      <MovedLocationBanner livePlace={livePlace} />
       {/* getItemLayout is omitted: row heights vary with banner aspect ratio
           and text size. */}
       <FlatList
