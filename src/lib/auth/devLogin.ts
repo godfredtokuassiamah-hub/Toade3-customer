@@ -31,21 +31,22 @@ let devProfile: Profile | null = null;
 export function startDevSession(): void {
   // Release builds: dead code, so the dev profile below is never bundled.
   if (!__DEV__) return;
-  // Name + phone only, so dev login goes through the address step.
+  // Fully-populated (incl. address) so routeForProfile sends the dev session
+  // straight to /home, skipping the complete-profile/complete-address steps.
   devProfile = {
     full_name: "Toade3 Tester",
     phone: "+233200000000",
     country_code: "+233",
-    address_label: null,
-    address_full: null,
+    address_label: "Dev Address",
+    address_full: "1 Independence Ave, Accra, Ghana",
     address_details: null,
-    address_lat: null,
-    address_lng: null,
+    address_lat: 5.6037,
+    address_lng: -0.187,
     address_place_id: null,
-    location_lat: null,
-    location_lng: null,
-    location_label: null,
-    location_updated_at: null,
+    location_lat: 5.6037,
+    location_lng: -0.187,
+    location_label: "Accra",
+    location_updated_at: new Date().toISOString(),
   };
 }
 

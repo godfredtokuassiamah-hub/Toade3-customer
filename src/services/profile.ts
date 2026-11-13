@@ -10,6 +10,7 @@ import {
 import {
   getDevProfile,
   isDevSession,
+  startDevSession,
   updateDevProfile,
 } from "../lib/auth/devLogin";
 import { mapBackendError } from "../lib/backend/errors";
@@ -225,6 +226,13 @@ export type LaunchRoute = "/onboarding" | PostAuthRoute;
 // /complete-profile or /complete-address if needed), so an offline user
 // isn't stranded.
 export async function getLaunchRoute(): Promise<LaunchRoute> {
+  // DEV-ONLY: skip the auth/onboarding flow and land directly on the main
+  // tabs. Starts the in-memory dev session so profile reads resolve to the
+  // local tester profile. Dead code in release builds (__DEV__ === false).
+  if (__DEV__) {
+    startDevSession();
+    return "/home";
+  }
   try {
     const { data, error } = await withTimeout(supabase.auth.getSession(), 6000);
     if (error || !data.session) return "/onboarding";
